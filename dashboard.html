@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grupo JCA — Meus Treinamentos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+
+<!-- Nav -->
+<nav class="nav">
+  <a href="index.html" class="nav-brand">
+    Train<span>Hub</span>
+  </a>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div id="navCompanyBadge" class="badge badge-orange" style="display:none;"></div>
+    <button class="btn btn-ghost btn-sm" onclick="confirmLogout()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Sair
+    </button>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-name" id="userName">—</div>
+      <div class="user-company" id="userCompany" style="display:flex;align-items:center;gap:6px;">—</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Navegação</div>
+      <button class="sidebar-link active" onclick="setFilter('all')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Todos os treinamentos
+      </button>
+
+      <div class="sidebar-section-label" style="margin-top:20px;">Categorias</div>
+      <div id="categoryLinks"></div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="sidebar-link" onclick="confirmLogout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair da conta
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────── -->
+  <main class="main-content">
+    <div class="content-header">
+      <div class="content-eyebrow" id="contentEyebrow">Treinamentos disponíveis</div>
+      <h1 class="content-title" id="contentTitle">Meus Treinamentos</h1>
+      <p class="content-subtitle" id="contentSubtitle"></p>
+      <p class="content-welcome" id="contentWelcome" style="margin-top:12px;font-size:1rem;color:var(--col-text-2);line-height:1.6;"></p>
+    </div>
+
+    <!-- Filtros por categoria -->
+    <div class="filter-bar" id="filterBar" style="display:none;">
+      <button class="filter-chip active" onclick="setFilter('all')">Todos</button>
+    </div>
+
+    <!-- Grid de treinamentos -->
+    <div class="training-grid" id="trainingGrid">
+      <!-- Preenchido via JS -->
+    </div>
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Modal de confirmação de saída -->
+<div id="logoutModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--col-surface);border:1px solid var(--col-border);border-radius:var(--radius-xl);padding:32px;max-width:360px;width:90%;text-align:center;">
+    <h3 style="font-family:var(--font-display);font-size:1.4rem;text-transform:uppercase;margin-bottom:12px;">Sair da conta?</h3>
+    <p style="font-size:0.9rem;color:var(--col-text-2);margin-bottom:24px;">Seu progresso não salvo pode ser perdido.</p>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button class="btn btn-ghost" onclick="closeLogoutModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="logout()">Confirmar Saída</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

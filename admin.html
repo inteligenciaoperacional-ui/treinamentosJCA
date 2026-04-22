@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grupo JCA — Painel Administrativo</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <img
+    src="https://res.cloudinary.com/dxnruvmgu/image/upload/v1776647491/Intelig%C3%AAncia_horizontal_branco_yxlsyw.png"
+    alt="Inteligência JCA"
+    style="height:32px;width:auto;"> <!-- ← ALTERE height AQUI -->
+  <div class="topbar-right">
+    <a href="index.html" class="btn btn-ghost btn-sm">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Plataforma
+    </a>
+    <button class="btn btn-success btn-sm" onclick="exportData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar companies.js
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="openImportModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Importar
+    </button>
+    <button class="btn btn-sm" style="background:var(--am-g);color:var(--am);border:1px solid rgba(255,184,0,.3)" onclick="migrateToFirebase()" id="btnMigrate">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      Migrar para Firebase
+    </button>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <h3>Empresas</h3>
+      <button class="btn btn-primary btn-sm" style="width:100%" onclick="openCompanyModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nova Empresa
+      </button>
+    </div>
+    <div class="company-list" id="companyList"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="mainArea">
+    <div class="empty-main" id="emptyState">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <h3>Selecione uma empresa</h3>
+      <p style="font-size:.85rem;max-width:280px">Escolha uma empresa na sidebar ou crie uma nova para gerenciar os treinamentos.</p>
+    </div>
+    <div id="companyPanel" style="display:none;flex-direction:column;flex:1"></div>
+  </main>
+</div>
+
+<!-- ─── MODALS ──────────────────────────────────────────────────── -->
+
+<!-- Modal: Nova/Editar Empresa -->
+<div class="modal-bg" id="modalCompany">
+  <div class="modal modal-md">
+    <div class="modal-head">
+      <div class="modal-title" id="modalCompanyTitle">Nova Empresa</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('modalCompany')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:14px">
+        <div class="form-group">
+          <label class="flabel">Nome completo *</label>
+          <input id="cName" class="finput" placeholder="Ex: Transportes Alpha Ltda." maxlength="80">
+        </div>
+        <div class="form-group">
+          <label class="flabel">Nome curto *</label>
+          <input id="cShort" class="finput" placeholder="Ex: Alpha" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label class="flabel">Prefixo de Matrícula *</label>
+          <input id="cPrefix" class="finput" placeholder="Ex: ALF" maxlength="5" style="text-transform:uppercase">
+          <span class="fhint">3–5 letras. Matrícula gerada: ALF-0001</span>
+        </div>
+        <div class="form-group">
+          <label class="flabel">Cor da empresa</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div class="color-row" id="colorSwatches"></div>
+            <input type="color" class="color-custom" id="cColorPicker" value="#FF6B00" oninput="setCustomColor(this.value)" title="Cor personalizada">
+          </div>
+          <input type="hidden" id="cColor" value="#FF6B00">
+        </div>
+        <div class="form-group full">
+          <label class="flabel">URL do Logo</label>
+          <input id="cLogo" class="finput" placeholder="https://res.cloudinary.com/... (deixe vazio para usar iniciais)">
+          <span class="fhint">Cole a URL da imagem do logo (Cloudinary, Drive, etc.). Recomendado: fundo transparente, formato PNG.</span>
+        </div>
+        <div class="form-group full">
+          <label class="flabel">Domínios de E-mail</label>
+          <div class="tag-list" id="domainTags">
+            <input class="tag-add-input" id="domainInput" placeholder="empresa.com.br" onkeydown="addDomain(event)">
+          </div>
+          <span class="fhint">Pressione Enter para adicionar. O sistema identificará a empresa automaticamente pelo e-mail.</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalCompany')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCompanyModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar Empresa
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo/Editar Treinamento -->
+<div class="modal-bg" id="modalTraining">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTrainingTitle">Novo Treinamento</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('modalTraining')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:14px">
+        <div class="form-group full">
+          <label class="flabel">Título do treinamento *</label>
+          <input id="tTitle" class="finput" placeholder="Ex: Direção Defensiva" maxlength="100">
+        </div>
+        <div class="form-group full">
+          <label class="flabel">Descrição</label>
+          <textarea id="tDesc" class="ftextarea" placeholder="Breve descrição do treinamento..." maxlength="300"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="flabel">Categoria</label>
+          <select id="tCategory" class="fselect">
+            <option>Segurança</option>
+            <option>Regulatório</option>
+            <option>Saúde</option>
+            <option>Técnico</option>
+            <option>Eficiência</option>
+            <option>Comportamental</option>
+            <option>Emergência</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="flabel">Nível</label>
+          <select id="tLevel" class="fselect">
+            <option>Básico</option>
+            <option>Intermediário</option>
+            <option>Avançado</option>
+          </select>
+        </div>
+      </div>
+
+      <hr class="divider" style="margin:18px 0">
+
+      <!-- Módulos -->
+      <div class="section-head">
+        <span class="section-label">Módulos / Apresentações</span>
+        <button class="btn btn-ghost btn-xs" onclick="addModuleRow()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Adicionar módulo
+        </button>
+      </div>
+
+      <div style="margin-bottom:8px;display:grid;grid-template-columns:24px 28px 1fr 90px 32px;gap:8px;padding:0 10px">
+        <span></span><span></span>
+        <span style="font-family:var(--fd);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Título do módulo — URL do Google Slides (src do iframe)</span>
+        <span style="font-family:var(--fd);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);text-align:center">Min</span>
+        <span></span>
+      </div>
+
+      <div id="moduleRows" class="module-list"></div>
+
+      <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="addModuleRow()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        + Módulo
+      </button>
+
+      <div style="margin-top:12px;padding:10px 14px;background:var(--inf-g);border:1px solid rgba(0,180,216,.25);border-radius:var(--r8)">
+        <p style="font-size:.78rem;color:var(--inf);line-height:1.6">
+          <strong>Como obter a URL do Google Slides:</strong><br>
+          Abra a apresentação → <strong>Arquivo → Publicar na Web → Incorporar</strong> → clique em Publicar → copie apenas o valor do atributo <code style="background:rgba(0,180,216,.15);padding:1px 5px;border-radius:3px">src="..."</code> do iframe gerado.
+        </p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalTraining')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTrainingModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar Treinamento
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Importar -->
+<div class="modal-bg" id="modalImport">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <div class="modal-title">Importar companies.js</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('modalImport')">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <p style="font-size:.88rem;color:var(--tx2)">Cole o conteúdo completo do arquivo <code>data/companies.js</code> abaixo para importar os dados existentes.</p>
+      <textarea id="importText" class="ftextarea" rows="10" placeholder="Cole o conteúdo do companies.js aqui..." style="font-family:var(--fm);font-size:.75rem"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalImport')">Cancelar</button>
+      <button class="btn btn-primary" onclick="importData()">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirmar exclusão -->
+<div class="modal-bg" id="modalConfirm">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <div class="modal-title" id="confirmTitle">Confirmar exclusão</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('modalConfirm')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirmMsg" style="font-size:.9rem;color:var(--tx2)"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalConfirm')">Cancelar</button>
+      <button class="btn btn-danger" id="confirmBtn">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Modal: Novo Instrutor (manual) -->
+<div class="modal-bg" id="modalInstructor">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <div class="modal-title">Novo Instrutor</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('modalInstructor')">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group">
+        <label class="flabel">Matrícula *</label>
+        <input id="iMatricula" class="finput" placeholder="EX: COM-0001" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label class="flabel">Nome completo *</label>
+        <input id="iNome" class="finput" placeholder="Nome do instrutor">
+      </div>
+      <div class="form-group">
+        <label class="flabel">E-mail corporativo *</label>
+        <input id="iEmail" class="finput" type="email" placeholder="instrutor@empresa.com.br">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalInstructor')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveInstructorManual()">Salvar Instrutor</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Importar CSV do Google Sheets -->
+<div class="modal-bg" id="modalCSV">
+  <div class="modal modal-md">
+    <div class="modal-head">
+      <div class="modal-title">Importar do Google Sheets</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('modalCSV')">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div style="padding:10px 14px;background:var(--inf-g);border:1px solid rgba(0,180,216,.25);border-radius:var(--r8)">
+        <p style="font-size:.78rem;color:var(--inf);line-height:1.6">
+          <strong>No Google Sheets:</strong> Arquivo → Baixar → CSV (.csv)<br>
+          Cole o conteúdo abaixo. Colunas esperadas:<br>
+          <code style="background:rgba(0,180,216,.15);padding:1px 5px;border-radius:3px">Matrícula | Nome | Empresa | E-mail</code>
+        </p>
+      </div>
+      <div class="form-group">
+        <label class="flabel">Conteúdo CSV</label>
+        <textarea id="csvText" class="ftextarea" rows="8"
+          placeholder="COM-0001,João Silva,Viação Cometa,joao@cometa.com.br&#10;COM-0002,Maria Santos,Viação Cometa,maria@cometa.com.br"
+          oninput="previewCSV()" style="font-family:var(--fm);font-size:.78rem"></textarea>
+      </div>
+      <div id="csvPreview"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalCSV')">Cancelar</button>
+      <button class="btn btn-primary" id="btnConfirmCSV" onclick="confirmImportCSV()">Confirmar Importação</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

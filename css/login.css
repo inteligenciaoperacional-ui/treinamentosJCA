@@ -1,0 +1,175 @@
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-stripes {
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(
+    -45deg, transparent, transparent 40px,
+    rgba(0,180,166,0.03) 40px, rgba(0,180,166,0.03) 80px
+  );
+  pointer-events: none;
+}
+
+.bg-glow {
+  position: fixed;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,180,166,0.07) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 460px;
+  position: relative;
+  z-index: 1;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 28px;
+  font-size: 0.85rem; color: var(--col-text-3);
+}
+.breadcrumb a { color: var(--col-text-3); transition: color var(--transition); }
+.breadcrumb a:hover { color: var(--col-orange); }
+.breadcrumb svg { width: 14px; height: 14px; stroke: currentColor; }
+
+/* Card */
+.login-card {
+  background: var(--col-surface);
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Stripe colorida no topo do card */
+.login-card-stripe {
+  height: 4px;
+  background: var(--col-orange);
+  transition: background var(--transition);
+}
+
+.login-card-header {
+  padding: 28px 32px 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Badge da empresa — logo */
+.company-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0A0E1A;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: all var(--transition);
+}
+
+.company-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6px;
+}
+
+.login-heading { flex: 1; }
+.login-heading h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--col-text);
+  line-height: 1.1;
+}
+.login-heading p {
+  font-size: 0.85rem;
+  color: var(--col-text-2);
+  margin-top: 5px;
+}
+
+.login-card-body { padding: 24px 32px 32px; }
+
+/* Erro */
+.error-box {
+  display: none;
+  padding: 10px 14px;
+  background: var(--col-danger-dim);
+  border: 1px solid rgba(255,71,87,0.3);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--col-danger);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.error-box.visible { display: block; }
+
+/* Botão Google */
+.btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: var(--col-surface-2);
+  border: 1px solid var(--col-border-2);
+  border-radius: var(--radius-md);
+  color: var(--col-text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-bottom: 16px;
+}
+.btn-google:hover {
+  background: var(--col-surface-3);
+  border-color: var(--col-orange);
+  box-shadow: 0 0 0 3px var(--col-orange-glow);
+  transform: translateY(-1px);
+}
+.btn-google:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Hint */
+.google-hint {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--col-text-3);
+  line-height: 1.6;
+}
+
+/* Footer */
+.login-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.8rem;
+  color: var(--col-text-3);
+}
+.login-footer a { font-size: 0.8rem; }
+
+@media (max-width: 520px) {
+  .login-card-header, .login-card-body { padding-left: 20px; padding-right: 20px; }
+}
