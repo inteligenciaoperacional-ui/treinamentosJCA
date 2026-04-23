@@ -25,6 +25,17 @@ const provider = new GoogleAuthProvider();
 
 // ─── Auth ─────────────────────────────────────────────────────
 
+// Login simples para admin — sem verificar coleção de instrutores
+async function loginWithGoogleAdmin() {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    return { user: result.user };
+  } catch (err) {
+    if (err.code === 'auth/popup-closed-by-user') return { error: null };
+    return { error: 'Falha no login. Tente novamente.' };
+  }
+}
+
 async function loginWithGoogle() {
   try {
     const result     = await signInWithPopup(auth, provider);
@@ -151,7 +162,7 @@ async function getProgress(userId, trainingId) {
 
 export {
   auth, db,
-  loginWithGoogle, logout, onAuthChange, getCurrentUser,
+  loginWithGoogle, loginWithGoogleAdmin, logout, onAuthChange, getCurrentUser,
   getInstructorByEmail, getAllInstructors, saveInstructor, deleteInstructor, importInstructors,
   getCompanies, saveCompany, deleteCompany,
   getTrainings, saveTraining, deleteTraining,
