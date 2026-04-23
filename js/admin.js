@@ -96,7 +96,7 @@ function hideAdminLogin() {
 
 async function adminLogin() {
   if (!_fb) return;
-  const result = await _fb.loginWithGoogle();
+  const result = await _fb.loginWithGoogleAdmin();
   if (result.error) {
     const err = document.getElementById('adminLoginError');
     if (err) { err.textContent = result.error; err.style.display = 'block'; }
