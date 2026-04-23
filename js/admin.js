@@ -1,71 +1,165 @@
 /* ============================================================
-   TrainHub — Admin (localStorage + migração Firebase)
+   TrainHub — Admin (Firebase com autenticação de admin)
    ============================================================ */
 
 const STORAGE_KEY   = 'trainhub_admin_data';
 const PRESET_COLORS = ['#00B4A6','#FFB800','#00D68F','#00B4D8','#8338EC','#FF4757','#06D6A0','#118AB2','#EF476F','#E85454'];
 
+// ─── E-mails com acesso de administrador ───────────────────
+// Adicione aqui os e-mails que podem gerenciar o admin
+const ADMIN_EMAILS = [
+  'kelvin.santos@viacaocometa.com.br',
+  // adicione outros e-mails de admin aqui
+];
+
 let _companies = [], _trainings = [], _instrutores = [];
 let activeCompanyId = null, editingCompanyId = null, editingTrainingId = null;
 let tempDomains = [];
+let _fb = null; // Firebase module
+let _isAdmin = false;
 
 /* ── BOOT ───────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
-  // Tenta carregar do localStorage primeiro
+  // Carrega Firebase
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) { const d = JSON.parse(raw); _companies = d.companies||[]; _trainings = d.trainings||[]; _instrutores = d.instrutores||[]; }
-  } catch(e) {}
+    _fb = await import('./firebase.js');
 
-  // Se localStorage vazio, carrega do Firebase
-  if (!_companies.length) {
+    // Verifica autenticação de admin
+    _fb.onAuthChange(async (user) => {
+      if (!user) {
+        // Não logado — mostra tela de login
+        showAdminLogin();
+        return;
+      }
+
+      if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+        showAdminDenied(user.email);
+        return;
+      }
+
+      _isAdmin = true;
+      hideAdminLogin();
+      await loadData();
+    });
+
+  } catch(e) {
+    console.warn('Firebase indisponível, modo offline:', e);
+    loadFromStorage();
+    renderSidebar();
+    if (_companies.length) selectCompany(_companies[0].id);
+    document.getElementById('loadingOverlay')?.classList.add('hidden');
+  }
+
+  document.querySelectorAll('.modal-bg').forEach(bg =>
+    bg.addEventListener('click', e => { if (e.target===bg) bg.classList.remove('open'); })
+  );
+});
+
+function showAdminLogin() {
+  document.getElementById('loadingOverlay')?.classList.add('hidden');
+  // Mostra overlay de login
+  let overlay = document.getElementById('adminLoginOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'adminLoginOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:9999';
+    overlay.innerHTML = `
+      <img src="https://res.cloudinary.com/dxnruvmgu/image/upload/v1776647491/Intelig%C3%AAncia_horizontal_branco_yxlsyw.png" style="width:200px;height:auto;margin-bottom:8px;">
+      <h2 style="font-family:var(--fd);font-size:1.4rem;text-transform:uppercase;letter-spacing:.06em">Painel Administrativo</h2>
+      <p style="color:var(--tx3);font-size:.9rem">Faça login com sua conta de administrador</p>
+      <button onclick="adminLogin()" style="display:flex;align-items:center;gap:10px;padding:12px 24px;background:var(--sur2);border:1px solid var(--bor2);border-radius:var(--r8);color:var(--tx);font-family:var(--fb);font-size:1rem;cursor:pointer;">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Entrar com Google
+      </button>
+      <div id="adminLoginError" style="color:var(--err);font-size:.85rem;display:none;"></div>
+    `;
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+}
+
+function showAdminDenied(email) {
+  document.getElementById('loadingOverlay')?.classList.add('hidden');
+  let overlay = document.getElementById('adminLoginOverlay');
+  if (overlay) overlay.style.display = 'flex';
+  const err = document.getElementById('adminLoginError');
+  if (err) {
+    err.textContent = `"${email}" não tem permissão de administrador.`;
+    err.style.display = 'block';
+  }
+}
+
+function hideAdminLogin() {
+  const overlay = document.getElementById('adminLoginOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+async function adminLogin() {
+  if (!_fb) return;
+  const result = await _fb.loginWithGoogle();
+  if (result.error) {
+    const err = document.getElementById('adminLoginError');
+    if (err) { err.textContent = result.error; err.style.display = 'block'; }
+  }
+  // onAuthChange vai cuidar do resto
+}
+
+async function loadData() {
+  // Tenta localStorage primeiro
+  loadFromStorage();
+
+  // Se vazio, carrega do Firebase
+  if (!_companies.length && _fb) {
     try {
-      document.getElementById('loadingOverlay') && (document.getElementById('loadingOverlay').style.display = 'flex');
-      const fb = await import('./firebase.js');
-      _companies   = await fb.getCompanies();
-      _trainings   = await fb.getTrainings();
-      _instrutores = await fb.getAllInstructors();
-      // Salva no localStorage para uso futuro
+      _companies   = await _fb.getCompanies();
+      _trainings   = await _fb.getTrainings();
+      _instrutores = await _fb.getAllInstructors();
       save();
-      console.log('Dados carregados do Firebase:', _companies.length, 'empresas');
-    } catch(e) {
-      console.warn('Erro ao carregar do Firebase:', e);
-    }
+    } catch(e) { console.warn('Erro Firebase:', e); }
   }
 
   renderSidebar();
   if (_companies.length) selectCompany(_companies[0].id);
   document.getElementById('loadingOverlay')?.classList.add('hidden');
-  document.querySelectorAll('.modal-bg').forEach(bg => bg.addEventListener('click', e => { if (e.target===bg) bg.classList.remove('open'); }));
-});
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { const d = JSON.parse(raw); _companies=d.companies||[]; _trainings=d.trainings||[]; _instrutores=d.instrutores||[]; }
+  } catch(e) {}
+}
 
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ companies: _companies, trainings: _trainings, instrutores: _instrutores }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ companies:_companies, trainings:_trainings, instrutores:_instrutores }));
 }
 
 /* ── MIGRAÇÃO FIREBASE ──────────────────────────────────── */
 async function migrateToFirebase() {
-  const btn = document.getElementById('btnMigrate');
+  if (!_fb) { toast('Firebase não disponível.','err'); return; }
   if (!_companies.length) { toast('Nenhuma empresa para migrar.','err'); return; }
-  if (!confirm('Migrar ' + _companies.length + ' empresa(s), ' + _trainings.length + ' treinamento(s) e ' + _instrutores.length + ' instrutor(es) para o Firebase?')) return;
-  btn.disabled = true;
-  btn.textContent = 'Conectando ao Firebase...';
+  if (!confirm('Salvar ' + _companies.length + ' empresa(s), ' + _trainings.length + ' treinamento(s) e ' + _instrutores.length + ' instrutor(es) no Firebase?')) return;
+
+  const btn = document.getElementById('btnMigrate');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
   try {
-    const fb = await import('./firebase.js');
-    btn.textContent = 'Migrando empresas...';
-    for (const c of _companies) { await fb.saveCompany(c); toast('Empresa "' + c.name + '" migrada.','ok'); }
-    btn.textContent = 'Migrando treinamentos...';
-    for (const t of _trainings) await fb.saveTraining(t);
-    if (_trainings.length) toast(_trainings.length + ' treinamentos migrados.','ok');
-    btn.textContent = 'Migrando instrutores...';
-    for (const i of _instrutores) await fb.saveInstructor(i);
-    if (_instrutores.length) toast(_instrutores.length + ' instrutores migrados.','ok');
-    btn.textContent = '✓ Concluído!';
-    btn.style.cssText = 'background:var(--ok-g);color:var(--ok);border-color:rgba(0,214,143,.3)';
+    for (const c of _companies) { await _fb.saveCompany(c); }
+    toast(_companies.length + ' empresas salvas!','ok');
+
+    for (const t of _trainings) { await _fb.saveTraining(t); }
+    toast(_trainings.length + ' treinamentos salvos!','ok');
+
+    for (const i of _instrutores) { await _fb.saveInstructor(i); }
+    if (_instrutores.length) toast(_instrutores.length + ' instrutores salvos!','ok');
+
+    btn.textContent = '✓ Salvo!';
+    btn.style.cssText += ';background:var(--ok-g);color:var(--ok);border-color:rgba(0,214,143,.3)';
     setTimeout(() => { btn.style.display='none'; }, 4000);
+
   } catch(e) {
-    btn.disabled = false; btn.textContent = 'Migrar para Firebase';
-    toast('Erro: ' + e.message, 'err'); console.error(e);
+    btn.disabled = false; btn.textContent = 'Salvar no Firebase';
+    toast('Erro: ' + e.message,'err'); console.error(e);
   }
 }
 
@@ -139,8 +233,8 @@ function switchTab(btn, tabId) {
 }
 
 function quickUpdate(id, field, value) {
-  const c = _companies.find(x=>x.id===id); if (!c) return;
-  c[field] = value; save(); renderSidebar(); toast('Salvo!','ok');
+  const c=_companies.find(x=>x.id===id); if (!c) return;
+  c[field]=value; save(); renderSidebar(); toast('Salvo localmente! Clique em "Salvar no Firebase" para sincronizar.','ok');
 }
 
 /* ── INSTRUTORES ────────────────────────────────────────── */
@@ -153,7 +247,7 @@ function renderInstructorTab() {
     + '<button class="btn btn-ghost btn-sm" onclick="openImportCSVModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Importar CSV</button>'
     + '<button class="btn btn-primary btn-sm" onclick="openInstructorModal()">+ Novo</button>'
     + '</div></div>'
-    + (list.length===0 ? '<div class="no-items">Nenhum instrutor. Importe o CSV ou adicione manualmente.</div>'
+    + (list.length===0 ? '<div class="no-items">Nenhum instrutor.</div>'
       : '<div style="display:flex;flex-direction:column;gap:6px">'
       + list.map(i => '<div style="display:grid;grid-template-columns:110px 1fr 1fr auto;gap:8px;align-items:center;padding:10px 12px;background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r8)">'
         + '<span style="font-family:var(--fm);font-size:.8rem;color:var(--tx2)">'+i.matricula+'</span>'
@@ -166,7 +260,7 @@ function renderInstructorTab() {
 
 function removeInstructor(mat) {
   if (!confirm('Remover '+mat+'?')) return;
-  _instrutores = _instrutores.filter(i=>i.matricula!==mat); save(); renderInstructorTab(); renderSidebar(); toast('Removido.','ok');
+  _instrutores=_instrutores.filter(i=>i.matricula!==mat); save(); renderInstructorTab(); renderSidebar(); toast('Removido.','ok');
 }
 
 function openInstructorModal() {
@@ -191,118 +285,107 @@ function openImportCSVModal() {
 }
 
 function parseCSV(text) {
-  const lines = text.trim().split('\n').filter(l=>l.trim());
-  const first = lines[0].toLowerCase();
-  const hasHeader = first.includes('matricula') || first.includes('nome') || first.includes('email');
-  const start = hasHeader ? 1 : 0;
-  let idxMat=0, idxNome=1, idxEmpresa=2, idxEmail=3;
+  const lines=text.trim().split('\n').filter(l=>l.trim());
+  const first=lines[0].toLowerCase();
+  const hasHeader=first.includes('matricula')||first.includes('nome')||first.includes('email');
+  const start=hasHeader?1:0;
+  let idxMat=0,idxNome=1,idxEmpresa=2,idxEmail=3;
   if (hasHeader) {
-    const headers = lines[0].split(',').map(h=>h.trim().toLowerCase());
-    headers.forEach((h,i) => {
+    const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());
+    headers.forEach((h,i)=>{
       if (h.includes('matricula')||h.includes('matrícula')) idxMat=i;
       else if (h==='nome') idxNome=i;
       else if (h.includes('empresa')) idxEmpresa=i;
       else if (h.includes('email')||h.includes('e-mail')) idxEmail=i;
     });
   }
-  return lines.slice(start).map(line => {
-    const sep  = line.includes(';') ? ';' : ',';
-    const cols = line.split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
-    // Detecta empresa pelo domínio do e-mail (mais confiável)
-    const email = cols[idxEmail]||'';
-    const domain = email.split('@')[1]?.toLowerCase()||'';
-    let empresaId = activeCompanyId;
-
+  return lines.slice(start).map(line=>{
+    const sep=line.includes(';')?';':',';
+    const cols=line.split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
+    const email=cols[idxEmail]||'';
+    const domain=email.split('@')[1]?.toLowerCase()||'';
+    let empresaId=activeCompanyId;
     if (domain) {
-      // 1. Tenta pelo domínio do e-mail
-      const byDomain = _companies.find(c =>
-        (c.emailDomains||[]).some(d => d.toLowerCase() === domain)
-      );
-      if (byDomain) {
-        empresaId = byDomain.id;
-      } else {
-        // 2. Fallback: pela coluna Empresa
-        const nomeEmpresa = cols[idxEmpresa]||'';
+      const byDomain=_companies.find(c=>(c.emailDomains||[]).some(d=>d.toLowerCase()===domain));
+      if (byDomain) empresaId=byDomain.id;
+      else {
+        const nomeEmpresa=cols[idxEmpresa]||'';
         if (nomeEmpresa) {
-          const byName = _companies.find(c =>
-            c.name.toLowerCase().includes(nomeEmpresa.toLowerCase()) ||
-            nomeEmpresa.toLowerCase().includes(c.name.toLowerCase())
-          );
-          if (byName) empresaId = byName.id;
+          const byName=_companies.find(c=>c.name.toLowerCase().includes(nomeEmpresa.toLowerCase())||nomeEmpresa.toLowerCase().includes(c.name.toLowerCase()));
+          if (byName) empresaId=byName.id;
         }
       }
     }
-    return { matricula:cols[idxMat]||'', nome:cols[idxNome]||'', email:cols[idxEmail]||'', empresaId, ativo:true };
+    return { matricula:cols[idxMat]||'', nome:cols[idxNome]||'', email, empresaId, ativo:true };
   }).filter(r=>r.matricula&&r.email);
 }
 
 function previewCSV() {
-  const rows = parseCSV(document.getElementById('csvText').value||'');
-  const preview = document.getElementById('csvPreview');
-  if (!rows.length) { preview.innerHTML='<p style="color:var(--err);font-size:.8rem">Nenhum registro válido.</p>'; return; }
-  const byCompany = {};
-  rows.forEach(r => { const n=_companies.find(c=>c.id===r.empresaId)?.name||'?'; byCompany[n]=(byCompany[n]||0)+1; });
-  const summary = Object.entries(byCompany).map(([n,c])=>n+': '+c).join(' · ');
-  preview.innerHTML = '<p style="font-size:.78rem;color:var(--ok);margin-bottom:4px">✓ '+rows.length+' instrutor'+(rows.length!==1?'es':'')+' encontrado'+(rows.length!==1?'s':'')+'.</p>'
-    + '<p style="font-size:.75rem;color:var(--tx3);margin-bottom:8px">'+summary+'</p>'
-    + '<div style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">'
-    + rows.slice(0,5).map(r => {
-        const cn = _companies.find(c=>c.id===r.empresaId)?.shortName||'?';
-        return '<div style="display:grid;grid-template-columns:100px 1fr 1fr 60px;gap:8px;padding:6px 8px;background:var(--sur3);border-radius:var(--r4);font-size:.75rem">'
-          + '<span style="font-family:var(--fm);color:var(--tx2)">'+r.matricula+'</span>'
-          + '<span>'+r.nome+'</span><span style="color:var(--tx3)">'+r.email+'</span>'
-          + '<span style="color:var(--or);font-weight:600">'+cn+'</span></div>';
-      }).join('')
-    + (rows.length>5?'<p style="font-size:.75rem;color:var(--tx3);text-align:center;margin-top:4px">...e mais '+(rows.length-5)+'</p>':'')
-    + '</div>';
+  const rows=parseCSV(document.getElementById('csvText').value||'');
+  const preview=document.getElementById('csvPreview');
+  if (!rows.length){preview.innerHTML='<p style="color:var(--err);font-size:.8rem">Nenhum registro válido.</p>';return;}
+  const byCompany={};
+  rows.forEach(r=>{const n=_companies.find(c=>c.id===r.empresaId)?.name||'?';byCompany[n]=(byCompany[n]||0)+1;});
+  const summary=Object.entries(byCompany).map(([n,c])=>n+': '+c).join(' · ');
+  preview.innerHTML='<p style="font-size:.78rem;color:var(--ok);margin-bottom:4px">✓ '+rows.length+' instrutor'+(rows.length!==1?'es':'')+' encontrado'+(rows.length!==1?'s':'')+'.</p>'
+    +'<p style="font-size:.75rem;color:var(--tx3);margin-bottom:8px">'+summary+'</p>'
+    +'<div style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">'
+    +rows.slice(0,5).map(r=>{
+      const cn=_companies.find(c=>c.id===r.empresaId)?.shortName||'?';
+      return '<div style="display:grid;grid-template-columns:100px 1fr 1fr 60px;gap:8px;padding:6px 8px;background:var(--sur3);border-radius:var(--r4);font-size:.75rem">'
+        +'<span style="font-family:var(--fm);color:var(--tx2)">'+r.matricula+'</span>'
+        +'<span>'+r.nome+'</span><span style="color:var(--tx3)">'+r.email+'</span>'
+        +'<span style="color:var(--or);font-weight:600">'+cn+'</span></div>';
+    }).join('')
+    +(rows.length>5?'<p style="font-size:.75rem;color:var(--tx3);text-align:center;margin-top:4px">...e mais '+(rows.length-5)+'</p>':'')
+    +'</div>';
 }
 
 function confirmImportCSV() {
-  const rows = parseCSV(document.getElementById('csvText').value||'');
-  if (!rows.length) { toast('Nenhum registro válido.','err'); return; }
-  rows.forEach(r => {
-    const idx = _instrutores.findIndex(i=>i.matricula===r.matricula);
+  const rows=parseCSV(document.getElementById('csvText').value||'');
+  if (!rows.length){toast('Nenhum registro válido.','err');return;}
+  rows.forEach(r=>{
+    const idx=_instrutores.findIndex(i=>i.matricula===r.matricula);
     if (idx>=0) _instrutores[idx]={..._instrutores[idx],...r};
     else _instrutores.push(r);
   });
   save(); closeModal('modalCSV'); renderInstructorTab(); renderSidebar();
-  toast(rows.length+' instrutores importados!','ok');
+  toast(rows.length+' instrutores importados! Clique em "Salvar no Firebase" para sincronizar.','ok');
 }
 
 /* ── TRAINING CARD ──────────────────────────────────────── */
 function renderTrainingCard(t) {
   const lc={'Básico':'badge-green','Intermediário':'badge-am','Avançado':'badge-err'};
   const cc={'Segurança':'badge-or','Regulatório':'badge-blue','Saúde':'badge-green','Técnico':'badge-am','Eficiência':'badge-muted'};
-  const mc=t.modules?.length||0, mins=(t.modules||[]).reduce((a,m)=>a+(parseInt(m.duration)||0),0);
+  const mc=t.modules?.length||0,mins=(t.modules||[]).reduce((a,m)=>a+(parseInt(m.duration)||0),0);
   return '<div class="training-card" id="tc-'+t.id+'">'
-    + '<div class="training-card-head" onclick="toggleCard(\''+t.id+'\')">'
-    + '<div class="training-left"><div class="training-title-row"><div class="training-name">'+t.title+'</div>'
-    + '<span class="badge '+(cc[t.category]||'badge-muted')+'">'+t.category+'</span>'
-    + '<span class="badge '+(lc[t.level]||'badge-muted')+'">'+t.level+'</span></div>'
-    + '<div class="training-meta-row"><span style="font-size:.78rem;color:var(--tx3)">'+mc+' módulo'+(mc!==1?'s':'')+' · '+mins+' min</span></div></div>'
-    + '<div class="training-right">'
-    + '<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openTrainingModal(\''+t.id+'\')">Editar</button>'
-    + '<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();confirmDelete(\'treinamento\',\''+t.id+'\')">Excluir</button>'
-    + '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>'
-    + '</div></div>'
-    + '<div class="training-body">'
-    + (t.modules||[]).map((m,i)=>'<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r8);margin-bottom:6px">'
-      + '<div class="mod-num">'+(i+1)+'</div><div style="flex:1;min-width:0">'
-      + '<div style="font-family:var(--fd);font-size:.9rem;font-weight:700;text-transform:uppercase">'+m.title+'</div>'
-      + '<div style="font-family:var(--fm);font-size:.7rem;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.githubUrl||'— sem URL —')+'</div></div>'
-      + '<span style="font-family:var(--fm);font-size:.75rem;color:var(--tx3);white-space:nowrap">'+(m.duration||'—')+' min</span>'
-      + (m.githubUrl?'<a href="'+m.githubUrl+'" target="_blank" class="btn btn-ghost btn-xs">↗</a>':'')
-      + '</div>').join('')
-    + '<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="openTrainingModal(\''+t.id+'\')">Editar módulos</button>'
-    + '</div></div>';
+    +'<div class="training-card-head" onclick="toggleCard(\''+t.id+'\')">'
+    +'<div class="training-left"><div class="training-title-row"><div class="training-name">'+t.title+'</div>'
+    +'<span class="badge '+(cc[t.category]||'badge-muted')+'">'+t.category+'</span>'
+    +'<span class="badge '+(lc[t.level]||'badge-muted')+'">'+t.level+'</span></div>'
+    +'<div class="training-meta-row"><span style="font-size:.78rem;color:var(--tx3)">'+mc+' módulo'+(mc!==1?'s':'')+' · '+mins+' min</span></div></div>'
+    +'<div class="training-right">'
+    +'<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openTrainingModal(\''+t.id+'\')">Editar</button>'
+    +'<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();confirmDelete(\'treinamento\',\''+t.id+'\')">Excluir</button>'
+    +'<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>'
+    +'</div></div>'
+    +'<div class="training-body">'
+    +(t.modules||[]).map((m,i)=>'<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r8);margin-bottom:6px">'
+      +'<div class="mod-num">'+(i+1)+'</div><div style="flex:1;min-width:0">'
+      +'<div style="font-family:var(--fd);font-size:.9rem;font-weight:700;text-transform:uppercase">'+m.title+'</div>'
+      +'<div style="font-family:var(--fm);font-size:.7rem;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.githubUrl||'— sem URL —')+'</div></div>'
+      +'<span style="font-family:var(--fm);font-size:.75rem;color:var(--tx3);white-space:nowrap">'+(m.duration||'—')+' min</span>'
+      +(m.githubUrl?'<a href="'+m.githubUrl+'" target="_blank" class="btn btn-ghost btn-xs">↗</a>':'')
+      +'</div>').join('')
+    +'<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="openTrainingModal(\''+t.id+'\')">Editar módulos</button>'
+    +'</div></div>';
 }
 
-function toggleCard(id) { document.getElementById('tc-'+id)?.classList.toggle('open'); }
+function toggleCard(id){document.getElementById('tc-'+id)?.classList.toggle('open');}
 
 /* ── COMPANY MODAL ──────────────────────────────────────── */
 function openCompanyModal(editId) {
-  editingCompanyId=editId||null;
-  tempDomains=[];
+  editingCompanyId=editId||null; tempDomains=[];
   document.getElementById('modalCompanyTitle').textContent=editId?'Editar Empresa':'Nova Empresa';
   buildColorSwatches();
   if (editId) {
@@ -321,16 +404,15 @@ function openCompanyModal(editId) {
     document.getElementById('cColorPicker').value='#00B4A6';
     highlightSwatch('#00B4A6');
   }
-  renderDomainTags();
-  openModal('modalCompany');
+  renderDomainTags(); openModal('modalCompany');
 }
 
 function buildColorSwatches() {
   document.getElementById('colorSwatches').innerHTML=PRESET_COLORS.map(c=>'<div class="color-swatch" style="background:'+c+'" data-color="'+c+'" onclick="selectColor(\''+c+'\')" title="'+c+'"></div>').join('');
 }
-function selectColor(hex) { document.getElementById('cColor').value=hex; document.getElementById('cColorPicker').value=hex; highlightSwatch(hex); }
-function setCustomColor(hex) { document.getElementById('cColor').value=hex; highlightSwatch(hex); }
-function highlightSwatch(hex) { document.querySelectorAll('.color-swatch').forEach(el=>el.classList.toggle('selected',el.dataset.color===hex)); }
+function selectColor(hex){document.getElementById('cColor').value=hex;document.getElementById('cColorPicker').value=hex;highlightSwatch(hex);}
+function setCustomColor(hex){document.getElementById('cColor').value=hex;highlightSwatch(hex);}
+function highlightSwatch(hex){document.querySelectorAll('.color-swatch').forEach(el=>el.classList.toggle('selected',el.dataset.color===hex));}
 function addDomain(e) {
   if (e.key!=='Enter') return; e.preventDefault();
   const v=document.getElementById('domainInput').value.trim().toLowerCase();
@@ -338,7 +420,7 @@ function addDomain(e) {
   if (!tempDomains.includes(v)) tempDomains.push(v);
   document.getElementById('domainInput').value=''; renderDomainTags();
 }
-function removeDomain(d) { tempDomains=tempDomains.filter(x=>x!==d); renderDomainTags(); }
+function removeDomain(d){tempDomains=tempDomains.filter(x=>x!==d);renderDomainTags();}
 function renderDomainTags() {
   const input=document.getElementById('domainInput');
   const wrap=document.getElementById('domainTags');
@@ -352,13 +434,13 @@ function saveCompanyModal() {
   const prefix=document.getElementById('cPrefix').value.trim().toUpperCase();
   const color=document.getElementById('cColor').value;
   const logo=document.getElementById('cLogo').value.trim();
-  if (!name||!short||!prefix) { toast('Preencha nome, nome curto e prefixo.','err'); return; }
+  if (!name||!short||!prefix){toast('Preencha nome, nome curto e prefixo.','err');return;}
   const id=editingCompanyId||(slug(name)+'-'+Date.now().toString(36));
   const company={id,name,shortName:short,matriculaPrefix:prefix,color,logo:logo||null,emailDomains:[...tempDomains],active:true};
   if (!editingCompanyId) _companies.push(company);
-  else { const idx=_companies.findIndex(c=>c.id===id); if(idx>=0) _companies[idx]=company; }
+  else{const idx=_companies.findIndex(c=>c.id===id);if(idx>=0)_companies[idx]=company;}
   save(); activeCompanyId=id;
-  toast(editingCompanyId?'Empresa atualizada!':'Empresa criada!','ok');
+  toast(editingCompanyId?'Empresa atualizada! Clique em "Salvar no Firebase".':'Empresa criada! Clique em "Salvar no Firebase".','ok');
   closeModal('modalCompany'); renderSidebar(); renderCompanyPanel();
 }
 
@@ -384,10 +466,10 @@ function openTrainingModal(editId) {
 }
 
 let _mrc=0;
-function renderModuleRows(mods) { document.getElementById('moduleRows').innerHTML=''; mods.forEach(m=>addModuleRow(m)); }
+function renderModuleRows(mods){document.getElementById('moduleRows').innerHTML='';mods.forEach(m=>addModuleRow(m));}
 
 function addModuleRow(data) {
-  const id='mr'+(_mrc++), el=document.getElementById('moduleRows'), num=el.children.length+1;
+  const id='mr'+(_mrc++),el=document.getElementById('moduleRows'),num=el.children.length+1;
   const row=document.createElement('div');
   row.className='module-row'; row.dataset.rowId=id; row.setAttribute('draggable','true');
   row.innerHTML='<div class="drag-handle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1" fill="currentColor"/><circle cx="15" cy="7" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="17" r="1" fill="currentColor"/><circle cx="15" cy="17" r="1" fill="currentColor"/></svg></div>'
@@ -395,19 +477,19 @@ function addModuleRow(data) {
     +'<div class="mod-info"><input class="mod-title-input" placeholder="Título" value="'+(data?.title||'')+'" oninput="renumberRows()">'
     +'<input class="mod-url-input" placeholder="https://docs.google.com/..." value="'+(data?.githubUrl||'')+'" oninput="checkUrl(this)" style="margin-top:4px">'
     +'<div class="url-status" id="us-'+id+'"></div></div>'
-    +'<input class="mod-dur-input" type="number" min="1" max="999" placeholder="min" value="'+(data?.duration||'')+'">'
+    +'<input class="mod-dur-input" type="number" min="1" max="999" placeholder="⏱ min" title="Carga horária em minutos" value="'+(data?.duration||'')+'">'
     +'<button class="mod-del-btn" onclick="removeModuleRow(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
-  row.addEventListener('dragstart',e=>{row._drag=true;row.classList.add('dragging');});
+  row.addEventListener('dragstart',()=>row.classList.add('dragging'));
   row.addEventListener('dragover',e=>e.preventDefault());
-  row.addEventListener('drop',e=>{e.preventDefault();const p=el;const nodes=[...p.children];const si=nodes.indexOf(document.querySelector('.dragging')),ti=nodes.indexOf(row);if(si<ti)p.insertBefore(document.querySelector('.dragging'),row.nextSibling);else p.insertBefore(document.querySelector('.dragging'),row);renumberRows();});
+  row.addEventListener('drop',e=>{e.preventDefault();const p=el,nodes=[...p.children],si=nodes.indexOf(document.querySelector('.dragging')),ti=nodes.indexOf(row);if(si<ti)p.insertBefore(document.querySelector('.dragging'),row.nextSibling);else p.insertBefore(document.querySelector('.dragging'),row);renumberRows();});
   row.addEventListener('dragend',()=>row.classList.remove('dragging'));
   el.appendChild(row);
   if (data?.githubUrl) checkUrl(row.querySelector('.mod-url-input'));
   renumberRows();
 }
 
-function removeModuleRow(btn) { btn.closest('.module-row').remove(); renumberRows(); }
-function renumberRows() { document.querySelectorAll('#moduleRows .mod-num').forEach((el,i)=>el.textContent=i+1); }
+function removeModuleRow(btn){btn.closest('.module-row').remove();renumberRows();}
+function renumberRows(){document.querySelectorAll('#moduleRows .mod-num').forEach((el,i)=>el.textContent=i+1);}
 function checkUrl(input) {
   const id=input.closest('.module-row').dataset.rowId;
   const s=document.getElementById('us-'+id); if(!s) return;
@@ -419,14 +501,14 @@ function checkUrl(input) {
 
 function saveTrainingModal() {
   const title=document.getElementById('tTitle').value.trim();
-  if (!title) { toast('Informe o título.','err'); return; }
+  if (!title){toast('Informe o título.','err');return;}
   const rows=[...document.querySelectorAll('#moduleRows .module-row')];
   const modules=rows.map((r,i)=>({id:'mod-'+String(i+1).padStart(2,'0'),title:r.querySelector('.mod-title-input').value.trim()||'Módulo '+(i+1),duration:parseInt(r.querySelector('.mod-dur-input').value)||0,githubUrl:r.querySelector('.mod-url-input').value.trim(),order:i+1}));
   const id=editingTrainingId||(slug(title)+'-'+Date.now().toString(36));
   const t={id,companyId:activeCompanyId,title,description:document.getElementById('tDesc').value.trim(),category:document.getElementById('tCategory').value,level:document.getElementById('tLevel').value,totalDuration:modules.reduce((a,m)=>a+m.duration,0),modules,active:true};
   if (!editingTrainingId) _trainings.push(t);
-  else { const idx=_trainings.findIndex(x=>x.id===id); if(idx>=0) _trainings[idx]=t; }
-  save(); toast(editingTrainingId?'Atualizado!':'Criado!','ok'); closeModal('modalTraining'); renderCompanyPanel();
+  else{const idx=_trainings.findIndex(x=>x.id===id);if(idx>=0)_trainings[idx]=t;}
+  save(); toast(editingTrainingId?'Atualizado! Clique em "Salvar no Firebase".':'Criado! Clique em "Salvar no Firebase".','ok'); closeModal('modalTraining'); renderCompanyPanel();
 }
 
 /* ── DELETE ─────────────────────────────────────────────── */
@@ -436,16 +518,16 @@ function confirmDelete(type,id) {
   document.getElementById('confirmBtn').onclick=()=>{
     if(type==='empresa'){_trainings=_trainings.filter(t=>t.companyId!==id);_instrutores=_instrutores.filter(i=>i.empresaId!==id);_companies=_companies.filter(c=>c.id!==id);activeCompanyId=_companies[0]?.id||null;if(!activeCompanyId){document.getElementById('emptyState').style.display='flex';document.getElementById('companyPanel').style.display='none';}}
     else _trainings=_trainings.filter(t=>t.id!==id);
-    save(); closeModal('modalConfirm'); renderSidebar(); if(activeCompanyId) renderCompanyPanel(); toast('Excluído.','ok');
+    save(); closeModal('modalConfirm'); renderSidebar(); if(activeCompanyId) renderCompanyPanel(); toast('Excluído. Clique em "Salvar no Firebase" para sincronizar.','ok');
   };
   openModal('modalConfirm');
 }
 
 /* ── UTILS ──────────────────────────────────────────────── */
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function toast(msg,type='info') { const w=document.getElementById('toastWrap');const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;w.appendChild(t);setTimeout(()=>t.remove(),3500); }
-function slug(str) { return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function toast(msg,type='info'){const w=document.getElementById('toastWrap');const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;w.appendChild(t);setTimeout(()=>t.remove(),4000);}
+function slug(str){return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
 
 Object.assign(window,{
   selectCompany,openCompanyModal,saveCompanyModal,quickUpdate,confirmDelete,
@@ -454,5 +536,5 @@ Object.assign(window,{
   selectColor,setCustomColor,addDomain,removeDomain,
   openImportCSVModal,previewCSV,confirmImportCSV,
   openInstructorModal,saveInstructorManual,removeInstructor,renderInstructorTab,
-  openModal,closeModal,migrateToFirebase,
+  openModal,closeModal,migrateToFirebase,adminLogin,
 });
