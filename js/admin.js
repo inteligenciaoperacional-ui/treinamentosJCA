@@ -10,11 +10,29 @@ let activeCompanyId = null, editingCompanyId = null, editingTrainingId = null;
 let tempDomains = [];
 
 /* ── BOOT ───────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Tenta carregar do localStorage primeiro
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) { const d = JSON.parse(raw); _companies = d.companies||[]; _trainings = d.trainings||[]; _instrutores = d.instrutores||[]; }
   } catch(e) {}
+
+  // Se localStorage vazio, carrega do Firebase
+  if (!_companies.length) {
+    try {
+      document.getElementById('loadingOverlay') && (document.getElementById('loadingOverlay').style.display = 'flex');
+      const fb = await import('./firebase.js');
+      _companies   = await fb.getCompanies();
+      _trainings   = await fb.getTrainings();
+      _instrutores = await fb.getAllInstructors();
+      // Salva no localStorage para uso futuro
+      save();
+      console.log('Dados carregados do Firebase:', _companies.length, 'empresas');
+    } catch(e) {
+      console.warn('Erro ao carregar do Firebase:', e);
+    }
+  }
+
   renderSidebar();
   if (_companies.length) selectCompany(_companies[0].id);
   document.getElementById('loadingOverlay')?.classList.add('hidden');
