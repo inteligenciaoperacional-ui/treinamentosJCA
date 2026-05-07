@@ -2,7 +2,7 @@
    JCA Treinamentos — Login com Firebase Auth (Google)
    ============================================================ */
 
-import { loginWithGoogle, onAuthChange, getCompanies }
+import { loginWithGoogle, onAuthChange, getCompanies, getInstructorByEmail, logout }
   from './firebase.js';
 
 // Logos por prefixo de matrícula
@@ -19,7 +19,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Verifica se já está logado
   onAuthChange(async (firebaseUser) => {
     if (firebaseUser) {
-      window.location.href = 'dashboard.html';
+      const instructor = await getInstructorByEmail(firebaseUser.email);
+      if (instructor) {
+        window.location.href = 'dashboard.html';
+      } else {
+        // E-mail não cadastrado — faz logout e mostra erro
+        await logout();
+        showError('E-mail não cadastrado como instrutor. Entre em contato com o administrador.');
+      }
     }
   });
 
@@ -52,6 +59,14 @@ async function handleGoogleLogin() {
   }
 
   if (!result.user) return; // Cancelou o popup
+
+  // Verifica se o e-mail está cadastrado como instrutor
+  const instructor = await getInstructorByEmail(result.user.email);
+  if (!instructor) {
+    await logout();
+    showError('E-mail não cadastrado. Entre em contato com o administrador.');
+    return;
+  }
 
   showToast('Login realizado!', 'success');
   setTimeout(() => window.location.href = 'dashboard.html', 600);
