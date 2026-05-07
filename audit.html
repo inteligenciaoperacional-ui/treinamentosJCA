@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="https://res.cloudinary.com/dxnruvmgu/image/upload/v1775248407/Intelig%C3%AAncia_branco_m524fk.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grupo JCA — Auditoria de Treinamentos</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+:root{
+  --or:#00B4A6;--or-g:rgba(0,180,166,.13);
+  --ok:#00D68F;--ok-g:rgba(0,214,143,.12);
+  --err:#FF4757;--err-g:rgba(255,71,87,.12);
+  --am:#FFB800;--am-g:rgba(255,184,0,.12);
+  --inf:#00B4D8;--inf-g:rgba(0,180,216,.12);
+  --sur:#0F1624;--sur2:#151E30;--sur3:#1C2840;
+  --bor:#243050;--bor2:#2E3D60;
+  --tx:#E8EAED;--tx2:#9BAACC;--tx3:#5C6E8A;
+  --fd:'Barlow Condensed',sans-serif;--fb:'IBM Plex Sans',sans-serif;--fm:'IBM Plex Mono',monospace;
+  --r8:8px;--r12:12px;--r16:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{font-family:var(--fb);background:#080C14;color:var(--tx);min-height:100vh;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:#080C14}
+::-webkit-scrollbar-thumb{background:var(--bor2);border-radius:3px}
+
+/* Topbar */
+.topbar{height:56px;background:var(--sur);border-bottom:1px solid var(--bor);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:100}
+.logo{font-family:var(--fd);font-size:1.3rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--tx)}
+.logo span{color:var(--or)}
+.logo sub{font-size:.55rem;color:var(--tx3);vertical-align:middle;margin-left:6px;text-transform:uppercase;letter-spacing:.1em}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:220px 1fr;flex:1;height:calc(100vh - 56px)}
+
+/* Sidebar */
+.sidebar{background:var(--sur);border-right:1px solid var(--bor);display:flex;flex-direction:column;overflow-y:auto;padding:12px 8px}
+.sidebar-label{font-family:var(--fd);font-size:.65rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--tx3);padding:8px 10px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r8);cursor:pointer;color:var(--tx2);font-size:.88rem;transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item svg{width:15px;height:15px;stroke:currentColor;flex-shrink:0}
+.nav-item:hover{background:var(--sur2);color:var(--tx)}
+.nav-item.active{background:var(--or-g);color:var(--or)}
+.sidebar-divider{height:1px;background:var(--bor);margin:8px 0}
+
+/* Filter bar */
+.filter-bar{padding:14px 20px;border-bottom:1px solid var(--bor);display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--sur2)}
+.filter-group{display:flex;align-items:center;gap:6px}
+.filter-label{font-family:var(--fd);font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);white-space:nowrap}
+.filter-select{background:var(--sur3);border:1px solid var(--bor);border-radius:var(--r8);color:var(--tx);font-family:var(--fb);font-size:.85rem;padding:6px 10px;outline:none;cursor:pointer;transition:border-color .15s}
+.filter-select:focus{border-color:var(--or)}
+.btn-filter{display:flex;align-items:center;gap:6px;padding:6px 14px;border:none;border-radius:var(--r8);background:var(--or);color:#0A0E1A;font-family:var(--fd);font-size:.85rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;transition:filter .15s}
+.btn-filter:hover{filter:brightness(1.1)}
+.btn-export{background:var(--ok-g);color:var(--ok);border:1px solid rgba(0,214,143,.3)}
+.btn-export:hover{background:var(--ok);color:#0A0E1A}
+
+/* Main content */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.section{padding:20px;display:none;flex-direction:column;gap:16px}
+.section.active{display:flex}
+
+/* KPI Cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.kpi{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r12);padding:16px;display:flex;flex-direction:column;gap:6px}
+.kpi-label{font-family:var(--fd);font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)}
+.kpi-value{font-family:var(--fd);font-size:2rem;font-weight:800;color:var(--tx);line-height:1}
+.kpi-value span{color:var(--or)}
+.kpi-sub{font-size:.75rem;color:var(--tx3)}
+
+/* Tables */
+.table-wrap{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r12);overflow:hidden}
+.table-head{padding:14px 16px;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between}
+.table-title{font-family:var(--fd);font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.table-count{font-family:var(--fm);font-size:.75rem;color:var(--tx3)}
+table{width:100%;border-collapse:collapse}
+th{font-family:var(--fd);font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding:10px 14px;text-align:left;border-bottom:1px solid var(--bor);white-space:nowrap}
+td{padding:10px 14px;font-size:.85rem;border-bottom:1px solid var(--bor);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--sur2)}
+.td-mono{font-family:var(--fm);color:var(--tx2);white-space:nowrap}
+.td-name{font-weight:500}
+.td-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-family:var(--fd);font-size:.68rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.badge-ok{background:var(--ok-g);color:var(--ok);border:1px solid rgba(0,214,143,.3)}
+.badge-am{background:var(--am-g);color:var(--am);border:1px solid rgba(255,184,0,.3)}
+.badge-or{background:var(--or-g);color:var(--or);border:1px solid rgba(0,180,166,.3)}
+
+/* Progress bar inline */
+.prog-bar{height:4px;background:var(--sur3);border-radius:2px;overflow:hidden;min-width:80px}
+.prog-fill{height:100%;background:var(--or);border-radius:2px}
+
+/* Empty */
+.empty{text-align:center;padding:48px 20px;color:var(--tx3)}
+.empty svg{width:48px;height:48px;stroke:var(--bor2);margin:0 auto 12px;display:block}
+.empty h3{font-family:var(--fd);font-size:1.1rem;text-transform:uppercase;color:var(--tx2);margin-bottom:6px}
+
+/* Expandable row */
+.expand-row{cursor:pointer}
+.expand-row td:first-child::before{content:'▶ ';font-size:.65rem;color:var(--tx3);transition:transform .2s;display:inline-block}
+.expand-row.open td:first-child::before{content:'▼ '}
+.detail-row{display:none;background:var(--sur2)}
+.detail-row.visible{display:table-row}
+.detail-inner{padding:10px 14px 14px 36px}
+.mod-detail-grid{display:grid;grid-template-columns:1fr 90px 90px 90px;gap:6px;margin-top:8px}
+.mod-detail-head{font-family:var(--fd);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding:4px 0}
+.mod-detail-row{display:contents}
+.mod-detail-row span{font-size:.8rem;padding:5px 0;border-bottom:1px solid var(--bor)}
+
+/* Loading */
+.loading-spinner{display:flex;align-items:center;justify-content:center;padding:48px;gap:12px;color:var(--tx3)}
+.spinner{width:24px;height:24px;border:2px solid var(--sur3);border-top-color:var(--or);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Login overlay */
+.login-overlay{position:fixed;inset:0;background:#080C14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:9999}
+.btn-google{display:flex;align-items:center;gap:10px;padding:12px 24px;background:var(--sur2);border:1px solid var(--bor2);border-radius:var(--r8);color:var(--tx);font-family:var(--fb);font-size:1rem;cursor:pointer;transition:all .2s}
+.btn-google:hover{border-color:var(--or)}
+</style>
+</head>
+<body>
+
+<!-- Login overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <img src="https://res.cloudinary.com/dxnruvmgu/image/upload/v1776647491/Intelig%C3%AAncia_horizontal_branco_yxlsyw.png" style="width:200px;height:auto;">
+  <h2 style="font-family:var(--fd);font-size:1.3rem;text-transform:uppercase;letter-spacing:.06em">Auditoria de Treinamentos</h2>
+  <p style="color:var(--tx3);font-size:.9rem">Acesso restrito a administradores</p>
+  <button class="btn-google" onclick="doLogin()">
+    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+    Entrar com Google
+  </button>
+  <p id="loginErr" style="color:var(--err);font-size:.85rem;display:none"></p>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="logo">JCA<span>TREINAMENTOS</span> <sub>Auditoria</sub></div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <span id="adminName" style="font-size:.8rem;color:var(--tx3)"></span>
+    <a href="admin.html" style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r8);color:var(--tx2);font-family:var(--fd);font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;text-decoration:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      Admin
+    </a>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-label">Visualizações</div>
+    <button class="nav-item active" onclick="showSection('overview',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Visão Geral
+    </button>
+    <button class="nav-item" onclick="showSection('byCompany',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      Por Empresa
+    </button>
+    <button class="nav-item" onclick="showSection('byInstructor',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Por Instrutor
+    </button>
+    <button class="nav-item" onclick="showSection('byTraining',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      Por Treinamento
+    </button>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-label">Período</div>
+    <button class="nav-item" onclick="setPeriod('7',this)">Últimos 7 dias</button>
+    <button class="nav-item active-period" onclick="setPeriod('30',this)">Últimos 30 dias</button>
+    <button class="nav-item" onclick="setPeriod('90',this)">Últimos 90 dias</button>
+    <button class="nav-item" onclick="setPeriod('0',this)">Todo o período</button>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">Empresa</span>
+        <select class="filter-select" id="filterCompany" onchange="applyFilters()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Treinamento</span>
+        <select class="filter-select" id="filterTraining" onchange="applyFilters()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="filter-group" style="margin-left:auto">
+  
+      </div>
+      <div class="filter-group" style="margin-left:auto"><button class="btn-filter" onclick="exportToSheets()" id="btnSheets" style="background:rgba(0,107,60,.2);color:#00b050;border:1px solid rgba(0,176,80,.3);display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-family:var(--fd);font-size:.85rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Exportar para Sheets</button></div>
+    </div>
+
+    <!-- Sessao: Visao Geral -->
+    <div class="section active" id="section-overview">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="table-wrap">
+        <div class="table-head">
+          <span class="table-title">Sessões Recentes</span>
+          <span class="table-count" id="recentCount"></span>
+        </div>
+        <div id="recentTable"></div>
+      </div>
+    </div>
+
+    <!-- Seção: Por Empresa -->
+    <div class="section" id="section-byCompany">
+      <div class="table-wrap">
+        <div class="table-head"><span class="table-title">Desempenho por Empresa</span></div>
+        <div id="companyTable"></div>
+      </div>
+    </div>
+
+    <!-- Seção: Por Instrutor -->
+    <div class="section" id="section-byInstructor">
+      <div class="table-wrap">
+        <div class="table-head">
+          <span class="table-title">Atividade por Instrutor</span>
+          <span class="table-count" id="instructorCount"></span>
+        </div>
+        <div id="instructorTable"></div>
+      </div>
+    </div>
+
+    <!-- Seção: Por Treinamento -->
+    <div class="section" id="section-byTraining">
+      <div class="table-wrap">
+        <div class="table-head"><span class="table-title">Análise por Treinamento</span></div>
+        <div id="trainingTable"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// Função de login exposta globalmente antes do módulo carregar
+function doLogin() {
+  if (window._firebaseLogin) {
+    window._firebaseLogin();
+  } else {
+    setTimeout(doLogin, 500);
+  }
+}
+</script>
+
+<script type="module">
+import { loginWithGoogleAdmin, onAuthChange, getSessions, getCompanies, getTrainings, getAdminEmails } from './js/firebase.js';
+
+let ADMIN_EMAILS = [
+  'kelvin.santos@viacaocometa.com.br',
+];
+// Carrega e-mails admin do Firebase
+getAdminEmails().then(emails => { if (emails && emails.length) ADMIN_EMAILS = emails; }).catch(() => {});
+
+let _sessions = [], _companies = [], _trainings = [];
+let _filtered = [];
+let _periodDays = 30;
+
+// ── Auth ────────────────────────────────────────────────────
+onAuthChange(async (user) => {
+  if (!user || !ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+    document.getElementById('loginOverlay').style.display = 'flex';
+    return;
+  }
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('adminName').textContent = user.email;
+  await loadData();
+});
+
+window._firebaseLogin = async () => {
+  const r = await loginWithGoogleAdmin();
+  if (r.error) {
+    const el = document.getElementById('loginErr');
+    el.textContent = r.error; el.style.display = 'block';
+  }
+};
+
+// ── Carregar dados ──────────────────────────────────────────
+async function loadData() {
+  showLoading();
+  [_sessions, _companies, _trainings] = await Promise.all([
+    getSessions(), getCompanies(), getTrainings()
+  ]);
+  populateFilters();
+  applyFilters();
+}
+
+function showLoading() {
+  document.getElementById('kpiGrid').innerHTML = '<div class="loading-spinner"><div class="spinner"></div> Carregando...</div>';
+}
+
+// ── Filtros ─────────────────────────────────────────────────
+function populateFilters() {
+  const cSelect = document.getElementById('filterCompany');
+  const tSelect = document.getElementById('filterTraining');
+  _companies.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = c.name;
+    cSelect.appendChild(opt);
+  });
+  _trainings.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id; opt.textContent = t.title;
+    tSelect.appendChild(opt);
+  });
+}
+
+window.applyFilters = () => {
+  const company  = document.getElementById('filterCompany').value;
+  const training = document.getElementById('filterTraining').value;
+  const cutoff   = _periodDays > 0 ? new Date(Date.now() - _periodDays * 86400000).toISOString() : '';
+
+  _filtered = _sessions.filter(s => {
+    if (company  && s.companyId  !== company)  return false;
+    if (training && s.trainingId !== training) return false;
+    if (cutoff   && s.completedAt < cutoff)    return false;
+    return true;
+  });
+
+  renderAll();
+};
+
+window.setPeriod = (days, btn) => {
+  _periodDays = parseInt(days);
+  document.querySelectorAll('.active-period').forEach(b => b.classList.remove('active-period'));
+  btn.classList.add('active-period');
+  applyFilters();
+};
+
+// ── Render all sections ─────────────────────────────────────
+function renderAll() {
+  renderKPIs();
+  renderRecent();
+  renderByCompany();
+  renderByInstructor();
+  renderByTraining();
+}
+
+// ── KPIs ────────────────────────────────────────────────────
+function renderKPIs() {
+  const total     = _filtered.length;
+  const uniqueInst = new Set(_filtered.map(s=>s.userId)).size;
+  const uniqueComp = new Set(_filtered.map(s=>s.companyId)).size;
+  const totalSecs  = _filtered.reduce((a,s)=>a+(s.totalSeconds||0),0);
+  const avgSecs    = total > 0 ? Math.round(totalSecs / total) : 0;
+
+  // Mês atual
+  const now = new Date();
+  const thisMonth = _filtered.filter(s => {
+    const d = new Date(s.completedAt||s.criadoEm);
+    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  }).length;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Total de Sessões</div><div class="kpi-value"><span>${total}</span></div><div class="kpi-sub">no período selecionado</div></div>
+    <div class="kpi"><div class="kpi-label">Sessões este mês</div><div class="kpi-value"><span>${thisMonth}</span></div><div class="kpi-sub">mês atual</div></div>
+    <div class="kpi"><div class="kpi-label">Instrutores Ativos</div><div class="kpi-value"><span>${uniqueInst}</span></div><div class="kpi-sub">no período</div></div>
+    <div class="kpi"><div class="kpi-label">Empresas</div><div class="kpi-value"><span>${uniqueComp}</span></div><div class="kpi-sub">com atividade</div></div>
+    <div class="kpi"><div class="kpi-label">Tempo Total</div><div class="kpi-value"><span>${fmtHours(totalSecs)}</span></div><div class="kpi-sub">horas de treinamento</div></div>
+    <div class="kpi"><div class="kpi-label">Tempo Médio</div><div class="kpi-value"><span>${fmtTime(avgSecs)}</span></div><div class="kpi-sub">por sessão</div></div>
+  `;
+}
+
+// ── Sessões recentes ────────────────────────────────────────
+function renderRecent() {
+  const sorted = [..._filtered].sort((a,b) => (b.completedAt||'').localeCompare(a.completedAt||''));
+  document.getElementById('recentCount').textContent = sorted.length + ' sessões';
+
+  if (!sorted.length) {
+    document.getElementById('recentTable').innerHTML = emptyState('Nenhuma sessão encontrada','Realize treinamentos para ver os dados aqui.');
+    return;
+  }
+
+  document.getElementById('recentTable').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Data</th><th>Instrutor</th><th>Empresa</th><th>Treinamento</th>
+        <th>Tempo</th><th>Módulos</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        ${sorted.slice(0,50).map(s => `
+          <tr>
+            <td class="td-mono">${fmtDate(s.completedAt||s.criadoEm)}</td>
+            <td class="td-name">${s.userName||s.userEmail||'—'}</td>
+            <td>${s.companyName||'—'}</td>
+            <td>${s.trainingTitle||'—'}</td>
+            <td class="td-mono">${fmtTime(s.totalSeconds||0)}</td>
+            <td class="td-mono">${s.totalModules||'—'}</td>
+            <td><span class="td-badge ${s.concluido?'badge-ok':'badge-am'}">${s.concluido?'✓ Concluído':'Em andamento'}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── Por empresa ─────────────────────────────────────────────
+function renderByCompany() {
+  const byComp = {};
+  _filtered.forEach(s => {
+    if (!byComp[s.companyId]) byComp[s.companyId] = { name:s.companyName, sessions:0, totalSecs:0, instructors:new Set(), trainings:new Set() };
+    byComp[s.companyId].sessions++;
+    byComp[s.companyId].totalSecs += s.totalSeconds||0;
+    byComp[s.companyId].instructors.add(s.userId);
+    byComp[s.companyId].trainings.add(s.trainingId);
+  });
+
+  const rows = Object.values(byComp).sort((a,b)=>b.sessions-a.sessions);
+  const maxSess = Math.max(...rows.map(r=>r.sessions), 1);
+
+  if (!rows.length) {
+    document.getElementById('companyTable').innerHTML = emptyState('Sem dados','Nenhuma sessão registrada no período.');
+    return;
+  }
+
+  document.getElementById('companyTable').innerHTML = `
+    <table>
+      <thead><tr><th>Empresa</th><th>Sessões</th><th>Atividade</th><th>Instrutores</th><th>Treinamentos</th><th>Tempo Total</th><th>Média/Sessão</th></tr></thead>
+      <tbody>
+        ${rows.map(r=>`
+          <tr>
+            <td class="td-name">${r.name||'—'}</td>
+            <td class="td-mono">${r.sessions}</td>
+            <td><div class="prog-bar"><div class="prog-fill" style="width:${Math.round(r.sessions/maxSess*100)}%"></div></div></td>
+            <td class="td-mono">${r.instructors.size}</td>
+            <td class="td-mono">${r.trainings.size}</td>
+            <td class="td-mono">${fmtTime(r.totalSecs)}</td>
+            <td class="td-mono">${fmtTime(Math.round(r.totalSecs/r.sessions))}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── Por instrutor ───────────────────────────────────────────
+function renderByInstructor() {
+  const byInst = {};
+  _filtered.forEach(s => {
+    const k = s.userId;
+    if (!byInst[k]) byInst[k] = { name:s.userName||s.userEmail, email:s.userEmail, company:s.companyName, sessions:0, totalSecs:0, trainings:new Set(), byMonth:{}, modulos:[] };
+    byInst[k].sessions++;
+    byInst[k].totalSecs += s.totalSeconds||0;
+    byInst[k].trainings.add(s.trainingId);
+    // Por mês
+    const mes = (s.completedAt||s.criadoEm||'').slice(0,7);
+    byInst[k].byMonth[mes] = (byInst[k].byMonth[mes]||0)+1;
+    // Módulos
+    if (s.modulos) byInst[k].modulos.push(...s.modulos);
+  });
+
+  const rows = Object.entries(byInst).sort((a,b)=>b[1].sessions-a[1].sessions);
+  document.getElementById('instructorCount').textContent = rows.length + ' instrutores';
+
+  if (!rows.length) {
+    document.getElementById('instructorTable').innerHTML = emptyState('Sem dados','Nenhum instrutor com atividade no período.');
+    return;
+  }
+
+  // Mês atual
+  const now = new Date();
+  const thisMes = now.toISOString().slice(0,7);
+
+  document.getElementById('instructorTable').innerHTML = `
+    <table>
+      <thead><tr>
+        <th></th><th>Instrutor</th><th>Empresa</th>
+        <th>Sessões Total</th><th>Este Mês</th><th>Treinamentos</th>
+        <th>Tempo Total</th><th>Média/Sessão</th>
+        <th>Dentro do Tempo</th><th>Diferença</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(([k,r],idx)=>{
+          const sessoesList = _filtered.filter(s => s.userId === k);
+          let dentroCount=0, foraCount=0, totalExcesso=0, totalSobra=0;
+          sessoesList.forEach(s => {
+            const tr = _trainings.find(t => t.id === s.trainingId);
+            const limiteSegs = (tr?.totalDuration||0)*60;
+            if (limiteSegs > 0) {
+              const diff = (s.totalSeconds||0) - limiteSegs;
+              if (diff > 0) { foraCount++; totalExcesso += diff; }
+              else { dentroCount++; totalSobra += Math.abs(diff); }
+            }
+          });
+          const totalComLimite = dentroCount + foraCount;
+          let dentroHtml = '<span style="color:var(--tx3);font-size:.78rem">—</span>';
+          let diffHtml   = '<span style="color:var(--tx3);font-size:.78rem">—</span>';
+          if (totalComLimite > 0) {
+            if (foraCount === 0) {
+              dentroHtml = '<span class="td-badge badge-ok">SIM</span>';
+              diffHtml   = '<span style="color:var(--ok);font-size:.82rem;font-family:var(--fm)">-'+fmtTime(Math.round(totalSobra/dentroCount))+'</span>';
+            } else if (dentroCount === 0) {
+              dentroHtml = '<span class="td-badge badge-err">NÃO</span>';
+              diffHtml   = '<span style="color:var(--err);font-size:.82rem;font-family:var(--fm)">+'+fmtTime(Math.round(totalExcesso/foraCount))+'</span>';
+            } else {
+              dentroHtml = '<span class="td-badge badge-am">PARCIAL</span>';
+              diffHtml   = '<span style="color:var(--tx3);font-size:.75rem">'+dentroCount+'/'+totalComLimite+' ok</span>';
+            }
+          }
+          return `
+          <tr class="expand-row" onclick="toggleExpand('inst-${idx}',this)">
+            <td style="width:32px;color:var(--tx3);font-size:.75rem">${idx+1}</td>
+            <td class="td-name">${r.name}</td>
+            <td style="color:var(--tx3);font-size:.82rem">${r.company||'—'}</td>
+            <td class="td-mono">${r.sessions}</td>
+            <td class="td-mono">${r.byMonth[thisMes]||0}</td>
+            <td class="td-mono">${r.trainings.size}</td>
+            <td class="td-mono">${fmtTime(r.totalSecs)}</td>
+            <td class="td-mono">${fmtTime(Math.round(r.totalSecs/r.sessions))}</td>
+            <td>${dentroHtml}</td>
+            <td>${diffHtml}</td>
+          </tr>
+          <tr class="detail-row" id="inst-${idx}">
+            <td colspan="10">
+              <div class="detail-inner">
+                <div style="font-family:var(--fd);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-bottom:8px">Detalhe por sessão</div>
+                <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px">
+                  ${sessoesList.sort((a,b)=>(b.completedAt||'').localeCompare(a.completedAt||'')).map(s => {
+                    const tr2 = _trainings.find(t=>t.id===s.trainingId);
+                    const lim = (tr2?.totalDuration||0)*60;
+                    const diff = lim > 0 ? (s.totalSeconds||0) - lim : null;
+                    const statusHtml = diff===null
+                      ? '<span style="color:var(--tx3);font-size:.75rem">sem limite</span>'
+                      : diff > 0
+                        ? '<span class="td-badge badge-err" style="font-size:.7rem">NÃO</span><span style="color:var(--err);font-family:var(--fm);font-size:.78rem;margin-left:4px">+'+fmtTime(diff)+'</span>'
+                        : '<span class="td-badge badge-ok" style="font-size:.7rem">SIM</span><span style="color:var(--ok);font-family:var(--fm);font-size:.78rem;margin-left:4px">-'+fmtTime(Math.abs(diff))+'</span>';
+                    return '<div style="display:grid;grid-template-columns:130px 1fr 80px auto;gap:10px;align-items:center;padding:6px 8px;background:var(--sur3);border-radius:6px">'
+                      + '<span style="font-family:var(--fm);font-size:.72rem;color:var(--tx3)">'+fmtDate(s.completedAt||s.criadoEm)+'</span>'
+                      + '<span style="font-size:.82rem">'+( s.trainingTitle||'—')+'</span>'
+                      + '<span style="font-family:var(--fm);font-size:.8rem">'+fmtTime(s.totalSeconds||0)+'</span>'
+                      + '<div style="display:flex;align-items:center;gap:4px">'+statusHtml+'</div>'
+                      + '</div>';
+                  }).join('')}
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+                  <span style="font-family:var(--fd);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Por mês:</span>
+                  ${Object.entries(r.byMonth).sort().map(([m,c])=>`<div style="text-align:center"><div style="font-family:var(--fm);font-size:1.1rem;color:var(--or)">${c}</div><div style="font-size:.7rem;color:var(--tx3)">${m}</div></div>`).join('')}
+                </div>
+                ${r.email ? `<div style="font-size:.78rem;color:var(--tx3)">E-mail: ${r.email}</div>` : ''}
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── Por treinamento ─────────────────────────────────────────
+function renderByTraining() {
+  const byTrain = {};
+  _filtered.forEach(s => {
+    const k = s.trainingId;
+    if (!byTrain[k]) byTrain[k] = { title:s.trainingTitle, sessions:0, totalSecs:0, instructors:new Set(), modTimings:{} };
+    byTrain[k].sessions++;
+    byTrain[k].totalSecs += s.totalSeconds||0;
+    byTrain[k].instructors.add(s.userId);
+    // Tempo por módulo
+    if (s.modulos) s.modulos.forEach(m => {
+      byTrain[k].modTimings[m.title] = (byTrain[k].modTimings[m.title]||0) + (m.tempoGasto||0);
+    });
+  });
+
+  const rows = Object.values(byTrain).sort((a,b)=>b.sessions-a.sessions);
+
+  if (!rows.length) {
+    document.getElementById('trainingTable').innerHTML = emptyState('Sem dados','Nenhum treinamento realizado no período.');
+    return;
+  }
+
+  document.getElementById('trainingTable').innerHTML = `
+    <table>
+      <thead><tr><th>Treinamento</th><th>Aplicações</th><th>Instrutores</th><th>Tempo Total</th><th>Média/Aplicação</th><th>Tempo por Módulo</th></tr></thead>
+      <tbody>
+        ${rows.map((r,idx)=>`
+          <tr class="expand-row" onclick="toggleExpand('train-${idx}',this)">
+            <td class="td-name">${r.title||'—'}</td>
+            <td class="td-mono">${r.sessions}</td>
+            <td class="td-mono">${r.instructors.size}</td>
+            <td class="td-mono">${fmtTime(r.totalSecs)}</td>
+            <td class="td-mono">${fmtTime(Math.round(r.totalSecs/r.sessions))}</td>
+            <td style="color:var(--tx3);font-size:.78rem">${Object.keys(r.modTimings).length} módulos</td>
+          </tr>
+          <tr class="detail-row" id="train-${idx}">
+            <td colspan="6">
+              <div class="detail-inner">
+                <div style="font-family:var(--fd);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-bottom:8px">Tempo médio por módulo</div>
+                ${Object.keys(r.modTimings).length === 0
+                  ? '<div style="font-size:.8rem;color:var(--tx3)">Sem dados de módulos ainda.</div>'
+                  : `<table style="width:100%;border-collapse:collapse">
+                      <tr><th style="text-align:left;font-family:var(--fd);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding:4px 0">Módulo</th><th style="text-align:right;font-family:var(--fd);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding:4px 0">Tempo Total</th><th style="text-align:right;font-family:var(--fd);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding:4px 0">Média</th></tr>
+                      ${Object.entries(r.modTimings).map(([mod,secs])=>`
+                        <tr>
+                          <td style="font-size:.82rem;padding:5px 0;border-bottom:1px solid var(--bor)">${mod}</td>
+                          <td style="font-family:var(--fm);font-size:.8rem;color:var(--tx2);text-align:right;padding:5px 0;border-bottom:1px solid var(--bor)">${fmtTime(secs)}</td>
+                          <td style="font-family:var(--fm);font-size:.8rem;color:var(--tx2);text-align:right;padding:5px 0;border-bottom:1px solid var(--bor)">${fmtTime(Math.round(secs/r.sessions))}</td>
+                        </tr>`).join('')}
+                    </table>`}
+              </div>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── Export CSV ──────────────────────────────────────────────
+window.exportCSV = () => {
+  const headers = ['Data','Instrutor','E-mail','Empresa','Treinamento','Tempo (seg)','Módulos','Concluído'];
+  const rows = _filtered.map(s => [
+    fmtDate(s.completedAt||s.criadoEm),
+    s.userName||'',
+    s.userEmail||'',
+    s.companyName||'',
+    s.trainingTitle||'',
+    s.totalSeconds||0,
+    s.totalModules||0,
+    s.concluido?'Sim':'Não',
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(';')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'auditoria-treinamentos.csv';
+  a.click();
+};
+
+// ── UI helpers ──────────────────────────────────────────────
+window.showSection = (id, btn) => {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  btn.classList.add('active');
+};
+
+window.toggleExpand = (id, row) => {
+  const detail = document.getElementById(id);
+  if (!detail) return;
+  detail.classList.toggle('visible');
+  row.classList.toggle('open');
+};
+
+// ── Formatters ──────────────────────────────────────────────
+function fmtTime(secs) {
+  if (!secs) return '—';
+  const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=secs%60;
+  if (h>0) return h+'h '+pad(m)+'m';
+  if (m>0) return m+'min '+pad(s)+'s';
+  return s+'s';
+}
+function fmtHours(secs) {
+  return (secs/3600).toFixed(1)+'h';
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function pad(n){return String(n).padStart(2,'0');}
+function emptyState(title, msg) {
+  return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg><h3>${title}</h3><p style="font-size:.85rem">${msg}</p></div>`;
+}
+
+// Export para Google Sheets
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxyTfpsEtSmm-xrqsdCGQhLKeRxj4lg9IjR2sli9r_6hkZ93njm4-ar_KrEZtouD1oHXg/exec';
+
+window.exportToSheets = async () => {
+  const btn = document.getElementById('btnSheets');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const sessaoRows = _filtered.map(s => {
+      const tr = _trainings.find(t => t.id === s.trainingId);
+      const lim = (tr?.totalDuration||0)*60;
+      const diff = lim > 0 ? (s.totalSeconds||0) - lim : null;
+      return { data:fmtDate(s.completedAt||s.criadoEm), instrutor:s.userName||'', email:s.userEmail||'', empresa:s.companyName||'', treinamento:s.trainingTitle||'', tempoMin:Math.round((s.totalSeconds||0)/60*10)/10, modulos:s.totalModules||0, dentroDoTempo:diff===null?'sem limite':diff>0?'NAO':'SIM', diferencaMin:diff!==null?(diff>0?'+':'-')+Math.round(Math.abs(diff)/60*10)/10+' min':'', concluido:s.concluido?'Sim':'Nao' };
+    });
+    const byI={};
+    _filtered.forEach(s=>{
+      if(!byI[s.userId])byI[s.userId]={name:s.userName||s.userEmail,email:s.userEmail,company:s.companyName,sessions:0,totalSecs:0,trainings:new Set(),byMonth:{},dC:0,fC:0,sob:0,exc:0};
+      byI[s.userId].sessions++;byI[s.userId].totalSecs+=s.totalSeconds||0;byI[s.userId].trainings.add(s.trainingId);
+      const m=(s.completedAt||'').slice(0,7);byI[s.userId].byMonth[m]=(byI[s.userId].byMonth[m]||0)+1;
+      const tr=_trainings.find(t=>t.id===s.trainingId);const lim=(tr?.totalDuration||0)*60;
+      if(lim>0){const d=(s.totalSeconds||0)-lim;if(d>0){byI[s.userId].fC++;byI[s.userId].exc+=d;}else{byI[s.userId].dC++;byI[s.userId].sob+=Math.abs(d);}}
+    });
+    const tm=new Date().toISOString().slice(0,7);
+    const instRows=Object.values(byI).map(r=>{
+      const tot=r.dC+r.fC;
+      const dT=tot===0?'sem limite':r.fC===0?'SIM':r.dC===0?'NAO':'PARCIAL';
+      const dif=tot===0?'':r.fC===0?'-'+Math.round(r.sob/(r.dC||1)/60*10)/10+' min (sobrou)':'+'+Math.round(r.exc/(r.fC||1)/60*10)/10+' min (estourou)';
+      return {instrutor:r.name,email:r.email,empresa:r.company,sessoesTotal:r.sessions,sessoesEstesMes:r.byMonth[tm]||0,tempoTotalMin:Math.round(r.totalSecs/60*10)/10,mediaMin:Math.round(r.totalSecs/r.sessions/60*10)/10,dentroDoTempo:dT,diferenca:dif};
+    });
+    const byC={};
+    _filtered.forEach(s=>{if(!byC[s.companyId])byC[s.companyId]={empresa:s.companyName,sessoes:0,totalSecs:0,inst:new Set(),tr:new Set()};byC[s.companyId].sessoes++;byC[s.companyId].totalSecs+=s.totalSeconds||0;byC[s.companyId].inst.add(s.userId);byC[s.companyId].tr.add(s.trainingId);});
+    const empRows=Object.values(byC).map(r=>({empresa:r.empresa,sessoes:r.sessoes,instrutores:r.inst.size,treinamentos:r.tr.size,tempoTotalMin:Math.round(r.totalSecs/60*10)/10,mediaMin:Math.round(r.totalSecs/r.sessoes/60*10)/10}));
+    for(const p of [{tipo:'sessoes',rows:sessaoRows},{tipo:'instrutores',rows:instRows},{tipo:'empresas',rows:empRows}]){
+      await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    }
+    btn.disabled=false;btn.textContent='Exportado!';btn.style.background='rgba(0,214,143,.2)';btn.style.color='var(--ok)';
+    setTimeout(()=>{btn.innerHTML='<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z\"/></svg> Exportar para Sheets';btn.style.background='rgba(0,107,60,.2)';btn.style.color='#00b050';btn.disabled=false;},3000);
+  } catch(e){btn.disabled=false;btn.textContent='Erro';console.error(e);}
+};
+
+</script>
+</body>
+</html>

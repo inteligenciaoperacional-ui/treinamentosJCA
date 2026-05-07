@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+<link rel="icon" type="image/png" href="https://res.cloudinary.com/dxnruvmgu/image/upload/v1775248407/Intelig%C3%AAncia_branco_m524fk.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grupo JCA — Meus Treinamentos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+
+<!-- Nav -->
+<nav class="nav">
+  <a href="index.html" class="nav-brand">
+    JCA<span>TREINAMENTOS</span>
+  </a>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div id="navCompanyBadge" class="badge badge-orange" style="display:none;"></div>
+    <button class="btn btn-ghost btn-sm" onclick="confirmLogout()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Sair
+    </button>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-name" id="userName">—</div>
+      <div class="user-company" id="userCompany" style="display:flex;align-items:center;gap:6px;">—</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Navegação</div>
+      <button class="sidebar-link active" onclick="setFilter('all')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Todos os treinamentos
+      </button>
+
+      <button class="sidebar-link" id="btnLancamento" onclick="showLancamento()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Lançamento de Treinamentos
+      </button>
+
+      <a href="lista-presenca.html" class="sidebar-link" style="text-decoration:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        Lista de Presença
+      </a>
+
+      <div class="sidebar-section-label" style="margin-top:20px;">Categorias</div>
+      <div id="categoryLinks"></div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="sidebar-link" onclick="confirmLogout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair da conta
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────── -->
+  <main class="main-content">
+    <div class="content-header">
+      <div class="content-eyebrow" id="contentEyebrow">Treinamentos disponíveis</div>
+      <h1 class="content-title" id="contentTitle">Meus Treinamentos</h1>
+      <p class="content-subtitle" id="contentSubtitle"></p>
+      <p class="content-welcome" id="contentWelcome" style="margin-top:12px;font-size:1rem;color:var(--col-text-2);line-height:1.6;"></p>
+    </div>
+
+    <!-- Filtros por categoria -->
+    <div class="filter-bar" id="filterBar" style="display:none;">
+      <button class="filter-chip active" onclick="setFilter('all')">Todos</button>
+    </div>
+
+    <!-- Grid de treinamentos -->
+    <div class="training-grid" id="trainingGrid">
+      <!-- Preenchido via JS -->
+    </div>
+
+    <!-- ── Painel Lançamento ─────────────────────────────── -->
+    <div id="lancamentoPanel" style="display:none;">
+      <div style="max-width:640px;">
+        <div style="margin-bottom:24px;">
+          <p style="font-size:.85rem;color:var(--col-text-2);line-height:1.6;">
+            Registre aqui os treinamentos que você aplicou.
+          </p>
+        </div>
+
+        <!-- Card do instrutor (auto preenchido) -->
+        <div id="lancInstrCard" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--col-surface-2);border:1px solid var(--col-border);border-radius:12px;margin-bottom:20px;">
+          <div id="lancInstrAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--col-orange);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:#0a0f1a;flex-shrink:0;">?</div>
+          <div>
+            <div id="lancInstrNome" style="font-weight:600;font-size:.95rem;"></div>
+            <div id="lancInstrMat" style="font-size:.78rem;color:var(--col-text-3);font-family:var(--font-mono);"></div>
+          </div>
+          <div style="margin-left:auto;font-size:.75rem;color:var(--col-text-3);">Instrutor logado</div>
+        </div>
+
+        <form id="lancForm" onsubmit="submitLancamento(event)" style="display:flex;flex-direction:column;gap:16px;">
+
+          <!-- Matrícula do colaborador -->
+          <div class="form-group">
+            <label class="flabel" style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--col-text-3);display:block;margin-bottom:6px;">Matrícula do colaborador <span style="color:var(--col-orange)">*</span></label>
+            <div style="position:relative;">
+              <input type="text" id="lancMat" class="finput" maxlength="6" placeholder="000000"
+                style="font-family:var(--font-mono);letter-spacing:2px;width:100%;"
+                autocomplete="off"
+                oninput="onLancMat(this)"
+                onblur="hideLancSug()"
+                onkeydown="lancMatKey(event)">
+              <div id="lancSug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--col-surface);border:1.5px solid var(--col-orange);border-top:0;border-radius:0 0 8px 8px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:500;max-height:200px;overflow-y:auto;"></div>
+            </div>
+            <!-- Preview do colaborador -->
+            <div id="lancColabPreview" style="display:none;margin-top:8px;padding:10px 14px;background:var(--col-surface-2);border-radius:8px;border:1px solid var(--col-border);">
+              <div id="lancColabNome" style="font-weight:600;font-size:.88rem;"></div>
+              <div id="lancColabInfo" style="font-size:.75rem;color:var(--col-text-3);margin-top:2px;"></div>
+            </div>
+          </div>
+
+          <!-- Data de realização -->
+          <div class="form-group">
+            <label class="flabel" style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--col-text-3);display:block;margin-bottom:6px;">Data de realização <span style="color:var(--col-orange)">*</span></label>
+            <input type="date" id="lancData" class="finput" required style="width:100%;">
+          </div>
+
+          <!-- Treinamento realizado -->
+          <div class="form-group">
+            <label class="flabel" style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--col-text-3);display:block;margin-bottom:6px;">Treinamento(s) realizado(s) <span style="color:var(--col-orange)">*</span></label>
+            <div id="lancTreinamentosContainer" style="min-height:48px;"></div>
+          </div>
+
+          <!-- Anexo -->
+          <div class="form-group">
+            <label class="flabel" style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--col-text-3);display:block;margin-bottom:6px;">Lista assinada (foto ou PDF) <span style="color:var(--col-orange)">*</span></label>
+            <label id="lancFileLabel" style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--col-surface-2);border:2px dashed var(--col-border);border-radius:10px;cursor:pointer;transition:border-color .15s;" 
+              onmouseenter="this.style.borderColor='var(--col-orange)'" 
+              onmouseleave="this.style.borderColor='var(--col-border)'">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--col-text-3)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span id="lancFileName" style="font-size:.85rem;color:var(--col-text-2);">Clique para selecionar arquivo…</span>
+              <input type="file" id="lancFile" accept="image/*,.pdf" style="display:none;" onchange="onLancFile(this)">
+            </label>
+          </div>
+
+          <!-- Botão enviar -->
+          <button type="submit" id="lancSubmitBtn" class="btn btn-primary" style="width:100%;padding:14px;font-size:.95rem;margin-top:4px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Enviar Lançamento
+          </button>
+
+        </form>
+
+        <!-- Status -->
+        <div id="lancStatus" style="display:none;margin-top:16px;padding:14px;border-radius:10px;text-align:center;font-size:.88rem;font-weight:600;"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Modal de confirmação de saída -->
+<div id="logoutModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--col-surface);border:1px solid var(--col-border);border-radius:var(--radius-xl);padding:32px;max-width:360px;width:90%;text-align:center;">
+    <h3 style="font-family:var(--font-display);font-size:1.4rem;text-transform:uppercase;margin-bottom:12px;">Sair da conta?</h3>
+    <p style="font-size:0.9rem;color:var(--col-text-2);margin-bottom:24px;">Seu progresso não salvo pode ser perdido.</p>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button class="btn btn-ghost" onclick="closeLogoutModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="logout()">Confirmar Saída</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/dashboard.js"></script>
+</body>
+</html>
