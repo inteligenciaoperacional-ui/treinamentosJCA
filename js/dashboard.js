@@ -395,6 +395,7 @@ const LANCAMENTO_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbySN13mYU
 let _quadroDB = null;
 let _lancSugActive = -1;
 let _lancColabSelecionado = null;
+let _motoristas = []; // lista de motoristas adicionados [{mat, nome, emp, desc}]
 
 async function loadQuadroDB() {
   if (_quadroDB) return _quadroDB;
@@ -448,6 +449,41 @@ window.onLancMat = function(el) {
   showLancSug(q);
 };
 
+window.addMotorista = function() {
+  if (!_lancColabSelecionado) {
+    showToastLanc('Selecione um colaborador válido da lista.', 'err');
+    return;
+  }
+  const { mat } = _lancColabSelecionado;
+  if (_motoristas.find(m => m.mat === mat)) {
+    showToastLanc('Este motorista já foi adicionado.', 'err');
+    return;
+  }
+  _motoristas.push({..._lancColabSelecionado});
+  _lancColabSelecionado = null;
+  document.getElementById('lancMat').value = '';
+  document.getElementById('lancColabPreview').style.display = 'none';
+  renderMotoristaTags();
+};
+
+function renderMotoristaTags() {
+  const tags = document.getElementById('lancMotTags');
+  const count = document.getElementById('lancMotCount');
+  if (!tags) return;
+  count.textContent = _motoristas.length + ' adicionado' + (_motoristas.length !== 1 ? 's' : '');
+  tags.innerHTML = _motoristas.map(m => `
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--col-surface-2);border:1px solid var(--col-border);border-radius:20px;max-width:100%;">
+      <span style="font-family:var(--font-mono);font-size:.72rem;color:var(--col-orange);">${m.mat}</span>
+      <span style="font-size:.75rem;font-weight:600;color:var(--col-text);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.nome}</span>
+      <span onclick="removeMotorista('${m.mat}')" style="cursor:pointer;color:var(--col-text-3);font-size:.85rem;line-height:1;flex-shrink:0;">✕</span>
+    </div>`).join('');
+}
+
+window.removeMotorista = function(mat) {
+  _motoristas = _motoristas.filter(m => m.mat !== mat);
+  renderMotoristaTags();
+};
+
 async function showLancSug(q) {
   const db = await loadQuadroDB();
   const box = document.getElementById('lancSug');
@@ -491,10 +527,18 @@ function hideLancSugNow() { const b = document.getElementById('lancSug'); if (b)
 window.lancMatKey = function(e) {
   const box = document.getElementById('lancSug');
   const items = box.querySelectorAll('.lanc-sug-item');
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_lancSugActive >= 0 && items[_lancSugActive]) {
+      items[_lancSugActive].dispatchEvent(new MouseEvent('mousedown'));
+    } else {
+      window.addMotorista();
+    }
+    return;
+  }
   if (!items.length) return;
   if (e.key === 'ArrowDown') { e.preventDefault(); _lancSugActive = Math.min(_lancSugActive + 1, items.length - 1); highlightLancSug(items); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); _lancSugActive = Math.max(_lancSugActive - 1, 0); highlightLancSug(items); }
-  else if (e.key === 'Enter' && _lancSugActive >= 0) { e.preventDefault(); items[_lancSugActive].dispatchEvent(new MouseEvent('mousedown')); }
   else if (e.key === 'Escape') hideLancSugNow();
 };
 
@@ -518,13 +562,10 @@ window.submitLancamento = async function(e) {
   const fileInput  = document.getElementById('lancFile');
   const file       = fileInput.files[0];
 
-  if (!mat || mat.length !== 6) { showToastLanc('Informe a matrícula do colaborador (6 dígitos).', 'err'); return; }
+  if (!_motoristas.length) { showToastLanc('Adicione ao menos um motorista.', 'err'); return; }
   if (!data) { showToastLanc('Informe a data de realização.', 'err'); return; }
   if (!_selTreinamentos.length) { showToastLanc('Selecione ao menos um treinamento.', 'err'); return; }
   if (!file) { showToastLanc('Anexe a lista assinada.', 'err'); return; }
-
-  // Monta nome dos treinamentos separados por " , "
-  const trein = _selTreinamentos.map(t => t.nome).join(' , ');
 
   const btn = document.getElementById('lancSubmitBtn');
   btn.disabled = true;
@@ -535,9 +576,9 @@ window.submitLancamento = async function(e) {
     const base64 = await fileToBase64(file);
 
     const payload = {
-      matColab:        mat,
-      dataRealizacao:  data.split('-').reverse().join('/'),  // converte AAAA-MM-DD → DD/MM/AAAA
-      treinamento:     trein,
+      motoristas:      _motoristas.map(m => m.mat),
+      dataRealizacao:  data.split('-').reverse().join('/'),
+      treinamentos:    _selTreinamentos.map(t => t.nome),
       matInstrutor:    _instructor?.matricula || '',
       emailInstrutor:  _user?.email || '',
       anexoBase64:     base64,
@@ -558,6 +599,8 @@ window.submitLancamento = async function(e) {
       document.getElementById('lancColabPreview').style.display = 'none';
       document.getElementById('lancFileName').textContent = 'Clique para selecionar arquivo…';
       _lancColabSelecionado = null;
+      _motoristas = [];
+      renderMotoristaTags();
       _selTreinamentos = [];
       renderTreinamentosSelector();
     } else {
