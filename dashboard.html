@@ -94,7 +94,7 @@
       <div style="max-width:640px;">
         <div style="margin-bottom:24px;">
           <p style="font-size:.85rem;color:var(--col-text-2);line-height:1.6;">
-            Registre aqui os treinamentos que você aplicou.
+            Registre aqui os treinamentos que você aplicou. Os dados são enviados para a base dos gestores automaticamente.
           </p>
         </div>
 
@@ -110,22 +110,33 @@
 
         <form id="lancForm" onsubmit="submitLancamento(event)" style="display:flex;flex-direction:column;gap:16px;">
 
-          <!-- Matrícula do colaborador -->
+          <!-- Motoristas -->
           <div class="form-group">
-            <label class="flabel" style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--col-text-3);display:block;margin-bottom:6px;">Matrícula do colaborador <span style="color:var(--col-orange)">*</span></label>
-            <div style="position:relative;">
-              <input type="text" id="lancMat" class="finput" maxlength="6" placeholder="000000"
-                style="font-family:var(--font-mono);letter-spacing:2px;width:100%;"
-                autocomplete="off"
-                oninput="onLancMat(this)"
-                onblur="hideLancSug()"
-                onkeydown="lancMatKey(event)">
-              <div id="lancSug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--col-surface);border:1.5px solid var(--col-orange);border-top:0;border-radius:0 0 8px 8px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:500;max-height:200px;overflow-y:auto;"></div>
+            <label class="flabel" style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--col-text-3);display:block;margin-bottom:6px;">
+              Motoristas <span style="color:var(--col-orange)">*</span>
+              <span id="lancMotCount" style="margin-left:8px;font-size:.7rem;background:var(--col-surface-3);padding:1px 8px;border-radius:10px;color:var(--col-text-2);font-weight:400;">0 adicionados</span>
+            </label>
+
+            <!-- Tags dos motoristas adicionados -->
+            <div id="lancMotTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:4px;"></div>
+
+            <!-- Input de matrícula -->
+            <div style="position:relative;display:flex;gap:8px;">
+              <div style="flex:1;position:relative;">
+                <input type="text" id="lancMat" class="finput" maxlength="6" placeholder="Digite a matrícula e pressione Enter ou +"
+                  style="font-family:var(--font-mono);letter-spacing:2px;width:100%;"
+                  autocomplete="off"
+                  oninput="onLancMat(this)"
+                  onblur="hideLancSug()"
+                  onkeydown="lancMatKey(event)">
+                <div id="lancSug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--col-surface);border:1.5px solid var(--col-orange);border-top:0;border-radius:0 0 8px 8px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:500;max-height:200px;overflow-y:auto;"></div>
+              </div>
+              <button type="button" onclick="addMotorista()" class="btn btn-primary" style="padding:0 16px;flex-shrink:0;">+</button>
             </div>
-            <!-- Preview do colaborador -->
-            <div id="lancColabPreview" style="display:none;margin-top:8px;padding:10px 14px;background:var(--col-surface-2);border-radius:8px;border:1px solid var(--col-border);">
-              <div id="lancColabNome" style="font-weight:600;font-size:.88rem;"></div>
-              <div id="lancColabInfo" style="font-size:.75rem;color:var(--col-text-3);margin-top:2px;"></div>
+            <!-- Preview do colaborador sendo digitado -->
+            <div id="lancColabPreview" style="display:none;margin-top:8px;padding:8px 14px;background:var(--col-surface-2);border-radius:8px;border:1px solid var(--col-border);">
+              <div id="lancColabNome" style="font-weight:600;font-size:.85rem;"></div>
+              <div id="lancColabInfo" style="font-size:.72rem;color:var(--col-text-3);margin-top:2px;"></div>
             </div>
           </div>
 
