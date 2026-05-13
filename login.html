@@ -7,6 +7,7 @@
   <title>Grupo JCA — Login</title>
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/login.css">
+<script src="js/theme.js"></script>
 </head>
 <body>
 
@@ -77,6 +78,9 @@
   </div>
 </div>
 
+<button id="themeToggleBtn" onclick="toggleTheme()" title="Mudar tema"
+  style="position:fixed;top:14px;right:20px;z-index:200;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;border:1px solid var(--col-border);background:var(--col-surface-2);color:var(--col-text-2);cursor:pointer;transition:all .18s;">
+</button>
 <div class="toast-container" id="toastContainer"></div>
 
 <script type="module" src="js/login.js"></script>
