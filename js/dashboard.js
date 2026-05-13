@@ -2,14 +2,10 @@
    JCA Treinamentos — Dashboard (Firebase)
    ============================================================ */
 
-import { onAuthChange, logout, getInstructorByEmail, getCompanies, getTrainings, getProgress }
+import { onAuthChange, logout, getInstructorByEmail, getCompanies, getTrainings, getProgress, LOGO_BY_SHORTNAME }
   from './firebase.js';
 
-const LOGO_BY_SHORTNAME = {
-  'COM': 'https://res.cloudinary.com/dxnruvmgu/image/upload/v1776644927/Cometa_iud8vx.png',
-  'AV1': 'https://res.cloudinary.com/dxnruvmgu/image/upload/v1776644927/1001_ynes4h.png',
-  'AVC': 'https://res.cloudinary.com/dxnruvmgu/image/upload/v1776644927/Catarinense_toqlsq.png',
-};
+// LOGO_BY_SHORTNAME importado de firebase.js
 
 let _user       = null;
 let _instructor = null;
