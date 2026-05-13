@@ -113,6 +113,7 @@
     .main-content {
       padding: var(--space-xl);
       max-width: 960px;
+      overflow-y: auto;
     }
 
     .content-header {
@@ -170,7 +171,7 @@
     }
 
     .filter-chip:hover { border-color: var(--col-border-2); color: var(--col-text-2); }
-    .filter-chip.active { background: var(--col-orange-glow); border-color: rgba(255,107,0,0.4); color: var(--col-orange); }
+    .filter-chip.active { background: var(--col-orange-glow); border-color: rgba(0,180,166,0.4); color: var(--col-orange); }
 
     /* Grid de treinamentos */
     .training-grid {
