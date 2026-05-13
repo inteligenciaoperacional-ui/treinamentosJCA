@@ -5,20 +5,17 @@
 const STORAGE_KEY   = 'jca-treinamentos_admin_data';
 const PRESET_COLORS = ['#00B4A6','#FFB800','#00D68F','#00B4D8','#8338EC','#FF4757','#06D6A0','#118AB2','#EF476F','#E85454'];
 
-// ─── E-mails com acesso de administrador ───────────────────
-// Adicione aqui os e-mails que podem gerenciar o admin
-// E-mails admin carregados do Firebase (coleção config/admins)
-let ADMIN_EMAILS = [
-  'kelvin.santos@viacaocometa.com.br',
-  'inteligenciaoperacional@viacaocometa.com.br'
-];
+// ─── E-mails admin carregados exclusivamente do Firebase ────
+// NÃO adicionar emails hardcoded aqui — use a aba Administradores no painel
+let ADMIN_EMAILS = []; // sempre vazio até Firebase responder
 
 async function loadAdminEmails() {
   try {
     if (!_fb) _fb = await import('./firebase.js');
     const emails = await _fb.getAdminEmails();
     if (emails && emails.length > 0) ADMIN_EMAILS = emails;
-  } catch(e) { console.warn('Usando ADMIN_EMAILS locais:', e); }
+    // Se Firebase retornar vazio, ADMIN_EMAILS fica [] — acesso negado por segurança
+  } catch(e) { console.warn('Erro ao carregar admins do Firebase:', e); }
 };
 
 let _companies = [], _trainings = [], _instrutores = [];
@@ -29,7 +26,6 @@ let _isAdmin = false;
 
 /* ── BOOT ───────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadAdminEmails();
   // Carrega Firebase
   try {
     _fb = await import('./firebase.js');
@@ -37,10 +33,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Verifica autenticação de admin
     _fb.onAuthChange(async (user) => {
       if (!user) {
-        // Não logado — mostra tela de login
         showAdminLogin();
         return;
       }
+
+      // Carrega emails APÓS autenticação (Firestore exige usuário logado)
+      await loadAdminEmails();
 
       if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
         showAdminDenied(user.email);
