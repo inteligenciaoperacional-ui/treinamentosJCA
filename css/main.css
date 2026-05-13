@@ -249,7 +249,7 @@ a:hover { color: var(--col-amber); }
   text-transform: uppercase;
 }
 
-.badge-orange  { background: var(--col-orange-glow); color: var(--col-orange); border: 1px solid rgba(255,107,0,0.3); }
+.badge-orange  { background: var(--col-orange-glow); color: var(--col-orange); border: 1px solid rgba(0,180,166,0.3); }
 .badge-green   { background: var(--col-success-dim); color: var(--col-success); border: 1px solid rgba(0,214,143,0.3); }
 .badge-blue    { background: var(--col-info-dim);    color: var(--col-info);    border: 1px solid rgba(0,180,216,0.3); }
 .badge-amber   { background: var(--col-amber-dim);   color: var(--col-amber);   border: 1px solid rgba(255,184,0,0.3); }
@@ -392,4 +392,65 @@ a:hover { color: var(--col-amber); }
     --space-2xl: 32px;
   }
   .nav { padding: 0 var(--space-md); }
+}
+/* ─── Tema Light ──────────────────────────────────────────── */
+[data-theme="light"] {
+  --col-bg:          #F0F4F8;
+  --col-surface:     #FFFFFF;
+  --col-surface-2:   #F5F7FA;
+  --col-surface-3:   #E8EDF4;
+  --col-border:      #D0D9E8;
+  --col-border-2:    #B8C6DC;
+  --col-text:        #0A0E1A;
+  --col-text-2:      #2D3A52;
+  --col-text-3:      #5C6E8A;
+  --col-text-inv:    #FFFFFF;
+  --shadow-sm:       0 2px 8px rgba(0,0,0,0.08);
+  --shadow-md:       0 4px 24px rgba(0,0,0,0.12);
+  --shadow-lg:       0 8px 48px rgba(0,0,0,0.15);
+  --shadow-orange:   0 0 24px rgba(0,180,166,0.2);
+}
+
+[data-theme="light"] body {
+  background-color: var(--col-bg);
+  color: var(--col-text);
+}
+
+[data-theme="light"] .nav {
+  background: rgba(255,255,255,0.92);
+  border-bottom-color: var(--col-border);
+}
+
+[data-theme="light"] .btn-primary {
+  color: #FFFFFF;
+}
+
+[data-theme="light"] .toast {
+  background: var(--col-surface);
+  border-color: var(--col-border-2);
+  color: var(--col-text);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track { background: var(--col-bg); }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--col-border-2); }
+
+/* Botão de tema */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--col-border);
+  background: var(--col-surface-2);
+  color: var(--col-text-2);
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.theme-toggle-btn:hover {
+  background: var(--col-surface-3);
+  color: var(--col-orange);
+  border-color: var(--col-orange);
 }
