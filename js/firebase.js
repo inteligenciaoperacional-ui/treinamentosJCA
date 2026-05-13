@@ -198,6 +198,14 @@ async function saveAdminEmails(emails) {
   await setDoc(doc(db, 'config', 'admins'), { emails }, { merge: true });
 }
 
+
+// ─── Logos por empresa (fonte única de verdade) ───────────────
+const LOGO_BY_SHORTNAME = {
+  'COM': 'https://res.cloudinary.com/dxnruvmgu/image/upload/v1776644927/Cometa_iud8vx.png',
+  'AV1': 'https://res.cloudinary.com/dxnruvmgu/image/upload/v1776644927/1001_ynes4h.png',
+  'AVC': 'https://res.cloudinary.com/dxnruvmgu/image/upload/v1776644927/Catarinense_toqlsq.png',
+};
+
 export {
   auth, db,
   loginWithGoogle, loginWithGoogleAdmin, logout, onAuthChange, getCurrentUser,
@@ -207,4 +215,5 @@ export {
   saveProgress, getProgress,
   saveSession, getSessions,
   getAdminEmails, saveAdminEmails,
+  LOGO_BY_SHORTNAME,
 };
