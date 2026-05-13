@@ -125,7 +125,7 @@ function loadCurrentModule() {
   if (ftgt) ftgt.textContent = targetSecs > 0 ? targetFmt : '—';
   document.getElementById('modProgText').textContent = '00:00 / ' + (targetSecs > 0 ? targetFmt : '—');
   document.getElementById('moduleCounter').textContent  = (state.currentModuleIndex + 1) + ' / ' + state.totalModules;
-  document.getElementById('btnPrev').disabled = state.isFirstModule;
+  document.getElementById('btnPrev').disabled = state.isFirstModule || !_timerRunning;
   // Reset módulo atual como não concluído ao carregar novo módulo
   _currentModuleDone = mod ? _completedModules.has(mod.id) : false;
   updateNextButton();
@@ -154,6 +154,7 @@ function loadCurrentModule() {
 
 // ── Timer ───────────────────────────────────────────────────
 let _timerRunning = false;
+let _awaitingConclusion = false; // true quando último módulo concluído, aguardando "Concluir Treinamento"
 let _sessionStartedAt = null;
 let _moduleTimings = {};
 let _currentModuleStartTime = null;
@@ -163,7 +164,7 @@ let _currentModuleDone = false;   // se o módulo atual foi marcado como conclu�
 function toggleTimer() {
   if (_timerRunning) { window.TrainingSession.pauseTimer(); _timerRunning = false; }
   else {
-    window.TrainingSession.startTimer(onTimerTick); _timerRunning = true;
+    window.TrainingSession.startTimer(onTimerTick); _timerRunning = true; _awaitingConclusion = false;
     if (!_sessionStartedAt) _sessionStartedAt = new Date().toISOString();
     if (!_currentModuleStartTime) _currentModuleStartTime = Date.now();
   }
@@ -212,6 +213,9 @@ function updatePlayPauseBtn() {
   const fpa = document.getElementById('focusPauseIcon');
   if (fp)  fp.style.display  = _timerRunning ? 'none'  : 'block';
   if (fpa) fpa.style.display = _timerRunning ? 'block' : 'none';
+  // Overlay de pausa — bloqueia tudo quando pausado (exceto ao aguardar conclusão)
+  const pauseOverlay = document.getElementById('pauseBlockOverlay');
+  if (pauseOverlay) pauseOverlay.style.display = (!_timerRunning && !_awaitingConclusion) ? 'flex' : 'none';
 }
 
 function resetModuleTimer() {
@@ -258,6 +262,8 @@ function concludeCurrentModule() {
     if (pauseIcon) pauseIcon.style.display = 'none';
     document.getElementById('timerModule')?.classList.remove('running','alert','overtime');
     document.getElementById('timerTotal')?.classList.remove('running');
+    // Não mostra overlay de pausa no último módulo — aguarda conclusão
+    _awaitingConclusion = true;
   }
 
   // Atualiza botões
@@ -267,6 +273,12 @@ function concludeCurrentModule() {
     ? 'Módulo concluído! Clique em "Concluir Treinamento" para finalizar.'
     : 'Módulo concluído! Pode avançar para o próximo.';
   showToast(msg, 'success');
+
+  // Garante que o overlay de pausa não aparece ao concluir último módulo
+  if (stateNow.isLastModule) {
+    const po = document.getElementById('pauseBlockOverlay');
+    if (po) po.style.display = 'none';
+  }
 }
 
 function updateNextButton() {
@@ -293,6 +305,10 @@ function updateNextButton() {
 }
 
 function nextModule() {
+  if (!_timerRunning) {
+    showToast('▶ Inicie o timer para navegar entre módulos.', 'warning');
+    return;
+  }
   if (!_currentModuleDone) {
     showToast('Conclua este módulo antes de avançar.', 'warning');
     return;
@@ -308,6 +324,10 @@ function nextModule() {
   }
 }
 function prevModule() {
+  if (!_timerRunning) {
+    showToast('▶ Inicie o timer para navegar entre módulos.', 'warning');
+    return;
+  }
   _alertedOvertime = false;
   recordModuleTiming();
   if (window.TrainingSession.prevModule()) {
@@ -340,7 +360,13 @@ function recordModuleTiming() {
 function finishTraining() {
   recordModuleTiming();
   const finalState = window.TrainingSession.completeTraining();
-  _timerRunning = false; updatePlayPauseBtn();
+  _timerRunning = false;
+  _awaitingConclusion = true; // mantém flag para não mostrar overlay
+  updatePlayPauseBtn();
+  _awaitingConclusion = false; // reseta após updatePlayPauseBtn
+  // Garante que overlay de pausa não aparece na conclusão
+  const _po = document.getElementById('pauseBlockOverlay');
+  if (_po) _po.style.display = 'none';
   document.getElementById('statFinalTime').textContent    = finalState.totalFormatted;
   document.getElementById('statModulesCount').textContent = String(finalState.totalModules);
   document.getElementById('completionModal').classList.add('visible');
@@ -392,8 +418,12 @@ document.addEventListener('keydown', (e) => {
   if (document.activeElement === document.getElementById('contentFrame')) return;
   switch(e.key) {
     case ' ':          e.preventDefault(); toggleTimer(); break;
-    case 'ArrowRight': case 'PageDown':    nextModule();  break;
-    case 'ArrowLeft':  case 'PageUp':      prevModule();  break;
+    case 'ArrowRight': case 'PageDown':
+      if (!_timerRunning) { showToast('▶ Inicie o timer para navegar entre módulos.', 'warning'); return; }
+      nextModule(); break;
+    case 'ArrowLeft':  case 'PageUp':
+      if (!_timerRunning) { showToast('▶ Inicie o timer para navegar entre módulos.', 'warning'); return; }
+      prevModule(); break;
     case 'f': case 'F': toggleFullscreen(); break;
   }
 });
