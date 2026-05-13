@@ -246,4 +246,4 @@ const TrainingSession = (() => {
 })();
 
 // Expõe globalmente para compatibilidade com módulos ES
-window.TrainingSession = TrainingSession;
+window.TrainingSession = TrainingSession; 
