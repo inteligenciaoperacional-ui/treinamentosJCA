@@ -2,16 +2,10 @@
    JCA Treinamentos — Login com Firebase Auth (Google)
    ============================================================ */
 
-import { loginWithGoogle, onAuthChange, getCompanies, getInstructorByEmail, logout }
+import { loginWithGoogle, onAuthChange, getCompanies, getInstructorByEmail, logout, LOGO_BY_SHORTNAME }
   from './firebase.js';
 
-// Logos por prefixo de matrícula
-const LOGO_BY_SHORTNAME = {
-  'COM': 'https://res.cloudinary.com/dxnruvmgu/image/upload/v1776644927/Cometa_iud8vx.png',
-  'AV1': 'https://res.cloudinary.com/dxnruvmgu/image/upload/v1776644927/1001_ynes4h.png',
-  'AVC': 'https://res.cloudinary.com/dxnruvmgu/image/upload/v1776644927/Catarinense_toqlsq.png',
-  // Adicione novos prefixos aqui
-};
+// LOGO_BY_SHORTNAME importado de firebase.js
 
 let _companies = [];
 
@@ -23,9 +17,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (instructor) {
         window.location.href = 'dashboard.html';
       } else {
-        // E-mail não cadastrado — faz logout e mostra erro
-        await logout();
+        // signOut sem redirecionar — mostra erro na tela de login
+        try { await import('./firebase.js').then(m => m.auth?.signOut()); } catch {}
         showError('E-mail não cadastrado como instrutor. Entre em contato com o administrador.');
+        document.getElementById('loadingOverlay')?.classList.add('hidden');
       }
     }
   });
@@ -59,15 +54,7 @@ async function handleGoogleLogin() {
   }
 
   if (!result.user) return; // Cancelou o popup
-
-  // Verifica se o e-mail está cadastrado como instrutor
-  const instructor = await getInstructorByEmail(result.user.email);
-  if (!instructor) {
-    await logout();
-    showError('E-mail não cadastrado. Entre em contato com o administrador.');
-    return;
-  }
-
+  // loginWithGoogle() já verificou o instrutor — se chegou aqui, está ok
   showToast('Login realizado!', 'success');
   setTimeout(() => window.location.href = 'dashboard.html', 600);
 }
