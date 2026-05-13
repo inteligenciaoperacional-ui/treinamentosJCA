@@ -116,7 +116,40 @@ tr:hover td{background:var(--sur2)}
 .login-overlay{position:fixed;inset:0;background:#080C14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:9999}
 .btn-google{display:flex;align-items:center;gap:10px;padding:12px 24px;background:var(--sur2);border:1px solid var(--bor2);border-radius:var(--r8);color:var(--tx);font-family:var(--fb);font-size:1rem;cursor:pointer;transition:all .2s}
 .btn-google:hover{border-color:var(--or)}
+
+/* ─── Tema Light ──────────────────────────────────────────── */
+[data-theme="light"] {
+  --or:#00B4A6;--or-g:rgba(0,180,166,.15);
+  --ok:#00A86B;--ok-g:rgba(0,168,107,.12);
+  --err:#E53935;--err-g:rgba(229,57,53,.1);
+  --am:#E6A800;--am-g:rgba(230,168,0,.12);
+  --inf:#0288D1;--inf-g:rgba(2,136,209,.12);
+  --sur:#FFFFFF;--sur2:#F5F7FA;--sur3:#E8EDF4;
+  --bor:#D0D9E8;--bor2:#B8C6DC;
+  --tx:#0A0E1A;--tx2:#2D3A52;--tx3:#5C6E8A;
+}
+[data-theme="light"] body { background:#F0F4F8; }
+[data-theme="light"] .topbar { background:var(--sur); border-bottom-color:var(--bor); }
+[data-theme="light"] .sidebar { background:var(--sur); border-right-color:var(--bor); }
+[data-theme="light"] .filter-bar { background:var(--sur2); border-bottom-color:var(--bor); }
+[data-theme="light"] .filter-select { background:var(--sur3); border-color:var(--bor); color:var(--tx); }
+[data-theme="light"] .kpi { background:var(--sur); border-color:var(--bor); }
+[data-theme="light"] .table-wrap { background:var(--sur); border-color:var(--bor); }
+[data-theme="light"] .table-head { border-bottom-color:var(--bor); }
+[data-theme="light"] th { border-bottom-color:var(--bor); }
+[data-theme="light"] td { border-bottom-color:var(--bor); color:var(--tx); }
+[data-theme="light"] tr:hover td { background:var(--sur2); }
+[data-theme="light"] .detail-row { background:var(--sur2); }
+[data-theme="light"] .nav-item:hover { background:var(--sur2); }
+[data-theme="light"] .nav-item.active { background:var(--or-g); }
+[data-theme="light"] .login-overlay { background:#F0F4F8; }
+[data-theme="light"] .btn-google { background:var(--sur2); border-color:var(--bor2); color:var(--tx); }
+[data-theme="light"] .spinner { border-color:var(--sur3); border-top-color:var(--or); }
+[data-theme="light"] .td-mono { color:var(--tx2); }
+[data-theme="light"] .logo { color:var(--tx); }
+[data-theme="light"] .main { background:#F0F4F8; }
 </style>
+<script src="js/theme.js"></script>
 </head>
 <body>
 
@@ -137,6 +170,7 @@ tr:hover td{background:var(--sur2)}
   <div class="logo">JCA<span>TREINAMENTOS</span> <sub>Auditoria</sub></div>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
     <span id="adminName" style="font-size:.8rem;color:var(--tx3)"></span>
+    <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Mudar tema"></button>
     <a href="admin.html" style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--sur2);border:1px solid var(--bor);border-radius:var(--r8);color:var(--tx2);font-family:var(--fd);font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;text-decoration:none">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
       Admin
@@ -251,11 +285,7 @@ function doLogin() {
 <script type="module">
 import { loginWithGoogleAdmin, onAuthChange, getSessions, getCompanies, getTrainings, getAdminEmails } from './js/firebase.js';
 
-let ADMIN_EMAILS = [
-  'kelvin.santos@viacaocometa.com.br',
-];
-// Carrega e-mails admin do Firebase
-getAdminEmails().then(emails => { if (emails && emails.length) ADMIN_EMAILS = emails; }).catch(() => {});
+let ADMIN_EMAILS = [];
 
 let _sessions = [], _companies = [], _trainings = [];
 let _filtered = [];
@@ -263,8 +293,15 @@ let _periodDays = 30;
 
 // ── Auth ────────────────────────────────────────────────────
 onAuthChange(async (user) => {
-  if (!user || !ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+  if (!user) {
     document.getElementById('loginOverlay').style.display = 'flex';
+    return;
+  }
+  try { ADMIN_EMAILS = (await getAdminEmails()) || []; } catch {}
+  if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+    document.getElementById('loginOverlay').style.display = 'flex';
+    const el = document.getElementById('loginErr');
+    if (el) { el.textContent = `"${user.email}" não tem permissão de administrador.`; el.style.display = 'block'; }
     return;
   }
   document.getElementById('loginOverlay').style.display = 'none';
