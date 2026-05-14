@@ -41,4 +41,6 @@ jobs:
 
           git diff --cached --quiet || git commit -m "Atualização automática quadro_db.json"
 
-          git push
+          git pull --rebase origin main
+
+          git push origin main
