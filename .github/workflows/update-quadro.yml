@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -39,8 +41,10 @@ jobs:
 
           git add quadro_db.json
 
-          git diff --cached --quiet || git commit -m "Atualização automática quadro_db.json"
+          git diff --cached --quiet && exit 0
+
+          git commit -m "Atualização automática quadro_db.json"
 
           git pull --rebase origin main
 
-          git push origin main
+          git push origin HEAD:main
