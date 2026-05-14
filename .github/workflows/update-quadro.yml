@@ -1,0 +1,41 @@
+name: Atualizar quadro_db.json
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  atualizar-json:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: |
+          pip install google-api-python-client google-auth
+
+      - name: Atualizar quadro_db.json
+        env:
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+        run: |
+          python config/update_quadro.py
+
+      - name: Commit automático
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add quadro_db.json
+
+          git diff --cached --quiet || git commit -m "Atualização automática quadro_db.json"
+
+          git push
