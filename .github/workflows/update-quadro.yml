@@ -39,4 +39,10 @@ jobs:
 
           git add quadro_db.json
 
-          git diff --cached --quiet || git commit -m "Atualização automática quadro_db.json"
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração detectada."  
+          else
+            git commit -m "Atualização automática quadro_db.json"
+            git pull --rebase origin main
+            git push origin main
+          fi
