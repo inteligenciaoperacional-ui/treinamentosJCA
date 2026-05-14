@@ -1,5 +1,8 @@
 name: Atualizar quadro_db.json
 
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: '0 5 * * *'
