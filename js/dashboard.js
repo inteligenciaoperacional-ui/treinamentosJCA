@@ -395,10 +395,36 @@ let _motoristas = []; // lista de motoristas adicionados [{mat, nome, emp, desc}
 
 async function loadQuadroDB() {
   if (_quadroDB) return _quadroDB;
+
   try {
     const res = await fetch('./quadro_db.json');
-    _quadroDB = await res.json();
-  } catch(e) { _quadroDB = {}; console.warn('Erro ao carregar quadro_db.json', e); }
+    const raw = await res.json();
+
+    // pega as linhas do JSON
+    const rows = raw?.body?.results?.[0]?.tables?.[0]?.rows || [];
+
+    // transforma em objeto indexado pela matrícula
+    _quadroDB = {};
+
+    rows.forEach(r => {
+      const matricula = String(r["[Matricula]"] || '').trim();
+
+      if (!matricula) return;
+
+      _quadroDB[matricula] = [
+        r["[Nome]"] || '',
+        r["[Empresa]"] || '',
+        r["[Descrição]"] || ''
+      ];
+    });
+
+    console.log('Quadro DB carregado:', _quadroDB);
+
+  } catch(e) {
+    _quadroDB = {};
+    console.warn('Erro ao carregar quadro_db.json', e);
+  }
+
   return _quadroDB;
 }
 
