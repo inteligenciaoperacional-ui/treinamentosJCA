@@ -438,12 +438,38 @@ table.pt { width: 100%; border-collapse: collapse; font-size: 13px; }
 
 <script>
 let EMPDB = {};
-  (async () => {
-    try {
-      const res = await fetch('./quadro_db.json');
-      EMPDB = await res.json();
-    } catch(e) { console.warn('Erro ao carregar quadro_db.json', e); }
-  })();
+
+(async () => {
+  try {
+    const res = await fetch('./quadro_db.json');
+    const raw = await res.json();
+
+    // Caminho correto do seu JSON
+    const rows = raw?.body?.results?.[0]?.tables?.[0]?.rows || [];
+
+    EMPDB = {};
+
+    rows.forEach(r => {
+      const mat = String(r["[Matricula]"] || '').trim();
+
+      if (!mat) return;
+
+      EMPDB[mat] = {
+        nome: r["[Nome]"] || '',
+        empresa: r["[Empresa]"] || '',
+        setor: r["[Setor]"] || '',
+        lider: r["[Lider]"] || '',
+        cpf: r["[CPF]"] || ''
+      };
+    });
+
+    console.log('EMPDB carregado:', EMPDB);
+
+  } catch(e) {
+    console.warn('Erro ao carregar quadro_db.json', e);
+    EMPDB = {};
+  }
+})();
 const EXCECOES = ['INTEGRAÇÃO OPERACIONAL', 'PRAT'];
 const MAX_H = 8;
 let allT = [];    // {name, hours, exempt}
@@ -713,11 +739,11 @@ function showSug(idx, q){
   } else {
     box.innerHTML = matches.map((k,i) => {
       const r = EMPDB[k];
-      const det = [r[1], r[2]].filter(Boolean).join(' · ');
+      const det = [r.empresa, r.setor].filter(Boolean).join(' · ');
       return `<div class="mat-sug-item" data-mat="${k}" onmousedown="pickSug(event,${idx},'${k}')">
         <span class="mat-sug-mat">${k}</span>
         <span class="mat-sug-info">
-          <div class="mat-sug-nome">${r[0]}</div>
+          <div class="mat-sug-nome">${r.nome}</div>
           ${det ? `<div class="mat-sug-det">${det}</div>` : ''}
         </span>
       </div>`;
@@ -757,11 +783,26 @@ function blurMat(el){ if(el.value&&el.value.length!==6) el.classList.add('mat-er
 
 function fillFromDB(idx, mat){
   const rec = EMPDB[mat];
+
   const nomeEl = document.getElementById(`nome_${idx}`);
   const setEl  = document.getElementById(`setor_${idx}`);
+
   if(rec){
-    if(nomeEl){ nomeEl.value=rec[0]; nomeEl.style.background='#f0fdf4'; nomeEl.style.color='#166534'; nomeEl.readOnly=true; }
-    if(setEl) { setEl.value=rec[1];  setEl.style.background='#f0fdf4';  setEl.style.color='#166534';  setEl.readOnly=true; }
+
+    if(nomeEl){
+      nomeEl.value = rec.nome || '';
+      nomeEl.style.background = '#f0fdf4';
+      nomeEl.style.color = '#166534';
+      nomeEl.readOnly = true;
+    }
+
+    if(setEl){
+      setEl.value = rec.setor || '';
+      setEl.style.background = '#f0fdf4';
+      setEl.style.color = '#166534';
+      setEl.readOnly = true;
+    }
+
   } else {
     clearRow(idx);
   }

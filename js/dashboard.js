@@ -414,7 +414,7 @@ async function loadQuadroDB() {
       _quadroDB[matricula] = [
         r["[Nome]"] || '',
         r["[Empresa]"] || '',
-        r["[Descrição]"] || ''
+        r["[Setor]"] || ''
       ];
     });
 
