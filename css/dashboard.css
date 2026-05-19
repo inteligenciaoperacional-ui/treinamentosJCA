@@ -311,3 +311,19 @@
       .sidebar { position: static; height: auto; }
       .main-content { padding: var(--space-lg); }
     }
+    /* ── Botão Plano de Aula ────────────────────────────────── */
+    .btn-plano-aula {
+      background: transparent;
+      color: var(--col-orange);
+      border: 1px solid var(--col-orange);
+      white-space: nowrap;
+      padding: 6px 11px;
+      font-size: 0.78rem;
+      transition: all var(--transition);
+    }
+
+    .btn-plano-aula:hover {
+      background: var(--col-orange-glow);
+      box-shadow: 0 0 12px rgba(0,180,166,0.25);
+      transform: translateY(-1px);
+    }
