@@ -187,11 +187,17 @@ async function renderTrainings() {
           ` : ''}
         </div>
         <div class="card-footer">
-          <span class="module-count">${(training.modules||[]).length} módulos</span>
-          <button class="btn btn-primary btn-sm btn-start">
-            ${progress > 0 ? 'Continuar' : 'Iniciar'}
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
+          <div style="display:flex;gap:6px;align-items:center;margin-left:auto;">
+            ${training.planoPDF ? `
+            <button class="btn btn-sm btn-plano-aula"
+              onclick="event.stopPropagation();openPdfViewer('${training.planoPDF}','${training.title.replace(/'/g,"\\'").replace(/"/g, '\"')}')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              Plano de Aula
+            </button>` : ''}
+            <button class="btn btn-primary btn-sm btn-start" style="padding:6px 16px;font-size:0.85rem;">
+              ${progress > 0 ? 'Continuar' : 'Iniciar'}
+            </button>
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -676,3 +682,53 @@ window.setFilter = function(cat) {
 };
 
 window.showLancamento = showLancamento;
+// ── PDF Viewer Modal ────────────────────────────────────────
+window.openPdfViewer = function(url, title) {
+  const old = document.getElementById('pdfViewerModal');
+  if (old) old.remove();
+
+  // Garante que usa URL de preview do Drive
+  const previewUrl = url.includes('/preview') ? url : url.replace('/view', '/preview').replace('/edit', '/preview');
+
+  const modal = document.createElement('div');
+  modal.id = 'pdfViewerModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9000;display:flex;flex-direction:column;';
+
+  modal.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--col-surface);border-bottom:1px solid var(--col-border);gap:12px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--col-orange)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span style="font-family:var(--font-display);font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--col-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Plano de Aula — ${title}</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="btn btn-ghost btn-sm" onclick="window.printDrivePdf('${previewUrl}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Imprimir
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pdfViewerModal').remove()">✕ Fechar</button>
+      </div>
+    </div>
+    <iframe src="${previewUrl}" style="flex:1;border:none;background:#fff;" allowfullscreen></iframe>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+};
+
+window.printDrivePdf = function(previewUrl) {
+  const printUrl = previewUrl.replace('/preview', '/view');
+  const win = window.open(printUrl, '_blank', 'width=900,height=700');
+  if (win) {
+    // Aguarda carregar e aciona impressão
+    const interval = setInterval(() => {
+      try {
+        if (win.document.readyState === 'complete') {
+          clearInterval(interval);
+          setTimeout(() => { try { win.print(); } catch(e) {} }, 800);
+        }
+      } catch(e) { clearInterval(interval); }
+    }, 300);
+    // Fallback: aciona após 3s independente
+    setTimeout(() => { clearInterval(interval); try { win.print(); } catch(e) {} }, 3000);
+  }
+};
