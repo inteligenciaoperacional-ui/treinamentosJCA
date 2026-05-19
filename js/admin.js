@@ -278,13 +278,20 @@ function openInstructorModal() {
   openModal('modalInstructor');
 }
 
-function saveInstructorManual() {
+async function saveInstructorManual() {
   const mat=document.getElementById('iMatricula').value.trim().toUpperCase();
   const nome=document.getElementById('iNome').value.trim();
   const email=document.getElementById('iEmail').value.trim().toLowerCase();
   if (!mat||!nome||!email) { toast('Preencha todos os campos.','err'); return; }
-  _instrutores.push({ matricula:mat, nome, email, empresaId:activeCompanyId, ativo:true });
-  save(); closeModal('modalInstructor'); renderInstructorTab(); renderSidebar(); toast('Instrutor salvo!','ok');
+  const inst = { matricula:mat, nome, email, empresaId:activeCompanyId, ativo:true };
+  _instrutores.push(inst);
+  save(); closeModal('modalInstructor'); renderInstructorTab(); renderSidebar();
+  if (_fb) {
+    try {
+      await _fb.saveInstructor(inst);
+      toast('Instrutor salvo!','ok');
+    } catch(e) { toast('Salvo localmente, mas erro no Firebase: '+e.message,'err'); }
+  } else { toast('Salvo offline.','ok'); }
 }
 
 /* ── IMPORTAR CSV ───────────────────────────────────────── */
@@ -438,7 +445,7 @@ function renderDomainTags() {
   wrap.appendChild(input);
 }
 
-function saveCompanyModal() {
+async function saveCompanyModal() {
   const name=document.getElementById('cName').value.trim();
   const short=document.getElementById('cShort').value.trim();
   const prefix=document.getElementById('cPrefix').value.trim().toUpperCase();
@@ -450,14 +457,74 @@ function saveCompanyModal() {
   if (!editingCompanyId) _companies.push(company);
   else{const idx=_companies.findIndex(c=>c.id===id);if(idx>=0)_companies[idx]=company;}
   save(); activeCompanyId=id;
-  toast(editingCompanyId?'Empresa atualizada! Clique em "Salvar no Firebase".':'Empresa criada! Clique em "Salvar no Firebase".','ok');
   closeModal('modalCompany'); renderSidebar(); renderCompanyPanel();
+  if (_fb) {
+    try {
+      await _fb.saveCompany(company);
+      toast(editingCompanyId?'Empresa atualizada!':'Empresa criada!','ok');
+    } catch(e) { toast('Salvo localmente, mas erro no Firebase: '+e.message,'err'); }
+  } else { toast('Salvo offline.','ok'); }
+}
+
+/* ── GOOGLE DRIVE PDF LINK ─────────────────────────────── */
+
+function _toDrivePreviewUrl(url) {
+  // Converte qualquer link do Drive para URL de preview
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (!m) return null;
+  return 'https://drive.google.com/file/d/' + m[1] + '/preview';
+}
+
+function validateDriveUrl(input) {
+  const val     = input.value.trim();
+  const statusEl = document.getElementById('tPdfStatus');
+  const clearBtn = document.getElementById('tPdfClear');
+
+  if (!val) {
+    statusEl.textContent = 'Cole o link de compartilhamento do PDF no Google Drive.';
+    statusEl.style.color = 'var(--tx3)';
+    clearBtn.style.display = 'none';
+    input.style.borderColor = '';
+    return;
+  }
+
+  const preview = _toDrivePreviewUrl(val);
+  clearBtn.style.display = 'block';
+
+  if (preview) {
+    // Substitui o valor pelo link de preview já convertido
+    input.value = preview;
+    statusEl.textContent = '✓ Link válido — pronto para salvar';
+    statusEl.style.color = 'var(--ok)';
+    input.style.borderColor = 'var(--ok)';
+  } else if (val.includes('drive.google.com') || val.includes('docs.google.com')) {
+    statusEl.textContent = '⚠ Link do Drive não reconhecido. Verifique o formato.';
+    statusEl.style.color = 'var(--am)';
+    input.style.borderColor = 'var(--am)';
+  } else {
+    statusEl.textContent = '⚠ Use um link do Google Drive.';
+    statusEl.style.color = 'var(--err)';
+    input.style.borderColor = 'var(--err)';
+  }
+}
+
+function clearDriveUrl() {
+  const input    = document.getElementById('tPdfUrl');
+  const statusEl = document.getElementById('tPdfStatus');
+  const clearBtn = document.getElementById('tPdfClear');
+  input.value             = '';
+  input.style.borderColor = '';
+  statusEl.textContent    = 'Cole o link de compartilhamento do PDF no Google Drive.';
+  statusEl.style.color    = 'var(--tx3)';
+  clearBtn.style.display  = 'none';
 }
 
 /* ── TRAINING MODAL ─────────────────────────────────────── */
 function openTrainingModal(editId) {
   editingTrainingId=editId||null;
   document.getElementById('modalTrainingTitle').textContent=editId?'Editar Treinamento':'Novo Treinamento';
+  // Reset URL field
+  clearDriveUrl();
   if (editId) {
     const t=_trainings.find(x=>x.id===editId); if (!t) return;
     document.getElementById('tTitle').value=t.title;
@@ -465,6 +532,16 @@ function openTrainingModal(editId) {
     document.getElementById('tCategory').value=t.category;
     document.getElementById('tLevel').value=t.level;
     renderModuleRows(t.modules||[]);
+    // Carrega link Drive existente
+    if (t.planoPDF) {
+      const input = document.getElementById('tPdfUrl');
+      input.value = t.planoPDF;
+      input.style.borderColor = 'var(--ok)';
+      const statusEl = document.getElementById('tPdfStatus');
+      if (statusEl) { statusEl.textContent = '✓ Link já cadastrado'; statusEl.style.color = 'var(--ok)'; }
+      const clearBtn = document.getElementById('tPdfClear');
+      if (clearBtn) clearBtn.style.display = 'block';
+    }
   } else {
     ['tTitle','tDesc'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('tCategory').value='Segurança';
@@ -509,16 +586,27 @@ function checkUrl(input) {
   s.textContent=v.startsWith('https://')?'✓ URL válida':'⚠ Deve começar com https://';
 }
 
-function saveTrainingModal() {
+async function saveTrainingModal() {
   const title=document.getElementById('tTitle').value.trim();
   if (!title){toast('Informe o título.','err');return;}
   const rows=[...document.querySelectorAll('#moduleRows .module-row')];
   const modules=rows.map((r,i)=>({id:'mod-'+String(i+1).padStart(2,'0'),title:r.querySelector('.mod-title-input').value.trim()||'Módulo '+(i+1),duration:Math.round((parseFloat(r.querySelector('.mod-dur-input').value)||0)*60),githubUrl:r.querySelector('.mod-url-input').value.trim(),order:i+1}));
   const id=editingTrainingId||(slug(title)+'-'+Date.now().toString(36));
-  const t={id,companyId:activeCompanyId,title,description:document.getElementById('tDesc').value.trim(),category:document.getElementById('tCategory').value,level:document.getElementById('tLevel').value,totalDuration:modules.reduce((a,m)=>a+m.duration,0),modules,active:true};
+  const planoPDF=document.getElementById('tPdfUrl').value.trim()||null;
+  const t={id,companyId:activeCompanyId,title,description:document.getElementById('tDesc').value.trim(),category:document.getElementById('tCategory').value,level:document.getElementById('tLevel').value,totalDuration:modules.reduce((a,m)=>a+m.duration,0),modules,planoPDF,active:true};
   if (!editingTrainingId) _trainings.push(t);
   else{const idx=_trainings.findIndex(x=>x.id===id);if(idx>=0)_trainings[idx]=t;}
-  save(); toast(editingTrainingId?'Atualizado! Clique em "Salvar no Firebase".':'Criado! Clique em "Salvar no Firebase".','ok'); closeModal('modalTraining'); renderCompanyPanel();
+  save();
+  closeModal('modalTraining');
+  renderCompanyPanel();
+  if (_fb) {
+    try {
+      await _fb.saveTraining(t);
+      toast(editingTrainingId?'Treinamento atualizado!':'Treinamento criado!','ok');
+    } catch(e) { toast('Salvo localmente, mas erro no Firebase: '+e.message,'err'); }
+  } else {
+    toast('Salvo offline.','ok');
+  }
 }
 
 /* ── DELETE ─────────────────────────────────────────────── */
@@ -602,4 +690,5 @@ Object.assign(window,{
   openImportCSVModal,previewCSV,confirmImportCSV,
   openInstructorModal,saveInstructorManual,removeInstructor,renderInstructorTab,
   openModal,closeModal,migrateToFirebase,adminLogin,renderAdminsTab,
+  validateDriveUrl,clearDriveUrl,
 });
