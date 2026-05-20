@@ -64,6 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderModulesList();
     loadCurrentModule();
+
+    // Garante que a UI começa no estado pausado
+    _timerRunning = false;
+    window.TrainingSession.pauseTimer();
+    updatePlayPauseBtn();
   });
 });
 
