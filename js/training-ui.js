@@ -65,8 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
     renderModulesList();
     loadCurrentModule();
 
-    // Garante que a UI começa no estado pausado
+    // Garante estado inicial correto sem mostrar overlay de pausa
     _timerRunning = false;
+    _hasStarted = false;
     window.TrainingSession.pauseTimer();
     updatePlayPauseBtn();
   });
@@ -159,6 +160,7 @@ function loadCurrentModule() {
 
 // ── Timer ───────────────────────────────────────────────────
 let _timerRunning = false;
+let _hasStarted = false;          // true após o instrutor apertar play pela primeira vez
 let _awaitingConclusion = false; // true quando último módulo concluído, aguardando "Concluir Treinamento"
 let _sessionStartedAt = null;
 let _moduleTimings = {};
@@ -169,6 +171,7 @@ let _currentModuleDone = false;   // se o módulo atual foi marcado como conclu�
 function toggleTimer() {
   if (_timerRunning) { window.TrainingSession.pauseTimer(); _timerRunning = false; }
   else {
+    _hasStarted = true;
     window.TrainingSession.startTimer(onTimerTick); _timerRunning = true; _awaitingConclusion = false;
     if (!_sessionStartedAt) _sessionStartedAt = new Date().toISOString();
     if (!_currentModuleStartTime) _currentModuleStartTime = Date.now();
@@ -220,7 +223,7 @@ function updatePlayPauseBtn() {
   if (fpa) fpa.style.display = _timerRunning ? 'block' : 'none';
   // Overlay de pausa — bloqueia tudo quando pausado (exceto ao aguardar conclusão)
   const pauseOverlay = document.getElementById('pauseBlockOverlay');
-  if (pauseOverlay) pauseOverlay.style.display = (!_timerRunning && !_awaitingConclusion) ? 'flex' : 'none';
+  if (pauseOverlay) pauseOverlay.style.display = (_hasStarted && !_timerRunning && !_awaitingConclusion) ? 'flex' : 'none';
 }
 
 function resetModuleTimer() {
