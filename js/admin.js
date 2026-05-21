@@ -476,6 +476,7 @@ function _toDrivePreviewUrl(url) {
 }
 
 function validateDriveUrl(input) {
+  if (!input) return;
   const val     = input.value.trim();
   const statusEl = document.getElementById('tPdfStatus');
   const clearBtn = document.getElementById('tPdfClear');
@@ -512,11 +513,9 @@ function clearDriveUrl() {
   const input    = document.getElementById('tPdfUrl');
   const statusEl = document.getElementById('tPdfStatus');
   const clearBtn = document.getElementById('tPdfClear');
-  input.value             = '';
-  input.style.borderColor = '';
-  statusEl.textContent    = 'Cole o link de compartilhamento do PDF no Google Drive.';
-  statusEl.style.color    = 'var(--tx3)';
-  clearBtn.style.display  = 'none';
+  if (input)    { input.value = ''; input.style.borderColor = ''; }
+  if (statusEl) { statusEl.textContent = 'Cole o link de compartilhamento do PDF no Google Drive.'; statusEl.style.color = 'var(--tx3)'; }
+  if (clearBtn) clearBtn.style.display = 'none';
 }
 
 /* ── TRAINING MODAL ─────────────────────────────────────── */
