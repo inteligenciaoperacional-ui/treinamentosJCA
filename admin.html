@@ -189,6 +189,26 @@
           Abra a apresentação → <strong>Arquivo → Publicar na Web → Incorporar</strong> → clique em Publicar → copie apenas o valor do atributo <code style="background:rgba(0,180,216,.15);padding:1px 5px;border-radius:3px">src="..."</code> do iframe gerado.
         </p>
       </div>
+
+      <hr class="divider" style="margin:18px 0">
+
+      <!-- Plano de Aula PDF -->
+      <div class="section-head">
+        <span class="section-label">Plano de Aula (PDF)</span>
+        <span style="font-size:.72rem;color:var(--tx3)">Opcional — visível para o instrutor no dashboard</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <input id="tPdfUrl" class="finput" placeholder="Cole o link do Google Drive (ex: drive.google.com/file/d/.../view)"
+            oninput="validateDriveUrl(this)" style="flex:1;font-size:.85rem;">
+          <button type="button" id="tPdfClear" style="display:none;background:none;border:none;color:var(--err);cursor:pointer;padding:4px 8px;border-radius:var(--r4);font-size:.78rem;" onclick="clearDriveUrl()">✕</button>
+        </div>
+        <div id="tPdfStatus" style="font-size:.72rem;color:var(--tx3);padding-left:24px;">
+          Cole o link de compartilhamento do PDF no Google Drive. O arquivo já deve estar compartilhado com os instrutores.
+        </div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('modalTraining')">Cancelar</button>
