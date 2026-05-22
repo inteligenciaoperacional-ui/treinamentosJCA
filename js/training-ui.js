@@ -141,7 +141,13 @@ function loadCurrentModule() {
     placeholder.style.display = 'none';
     iframe.style.display      = 'block';
     iframe.src = 'about:blank';
-    setTimeout(() => { iframe.src = mod.githubUrl; }, 80);
+    setTimeout(() => {
+      // Garante que os slides não avançam automaticamente
+      let url = mod.githubUrl;
+      url = url.replace(/start=true/gi, 'start=false');
+      if (!url.includes('start=')) url += (url.includes('?') ? '&' : '?') + 'start=false';
+      iframe.src = url;
+    }, 80);
   } else {
     iframe.style.display      = 'none';
     placeholder.style.display = 'flex';
