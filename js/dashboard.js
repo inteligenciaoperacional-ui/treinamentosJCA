@@ -2,7 +2,7 @@
    JCA Treinamentos — Dashboard (Firebase)
    ============================================================ */
 
-import { onAuthChange, logout, getInstructorByEmail, getCompanies, getTrainings, getProgress, LOGO_BY_SHORTNAME }
+import { onAuthChange, logout, getInstructorByEmail, getCompanies, getTrainings, LOGO_BY_SHORTNAME }
   from './firebase.js';
 
 // LOGO_BY_SHORTNAME importado de firebase.js
@@ -150,15 +150,10 @@ async function renderTrainings() {
   const levelColor = { 'Básico':'badge-green','Intermediário':'badge-amber','Avançado':'badge-danger' };
   const catColor   = { 'Segurança':'badge-orange','Regulatório':'badge-blue','Saúde':'badge-green','Técnico':'badge-amber','Eficiência':'badge-muted' };
 
-  // Busca progresso de todos os treinamentos em paralelo
-  const progressMap = {};
-  await Promise.all(filtered.map(async t => {
-    const p = await getProgress(_user.uid, t.id);
-    progressMap[t.id] = p ? ((p.completedModules?.length || 0) / (t.modules?.length || 1)) * 100 : 0;
-  }));
+
 
   grid.innerHTML = filtered.map(training => {
-    const progress = progressMap[training.id] || 0;
+
     return `
       <div class="training-card" onclick="openTraining('${training.id}')">
         <div class="card-header-stripe" style="background:${_company?.color || 'var(--col-orange)'};"></div>
@@ -179,12 +174,7 @@ async function renderTrainings() {
               ${(training.modules||[]).length} módulos
             </span>
           </div>
-          ${progress > 0 ? `
-          <div class="progress-bar">
-            <div class="progress-fill" style="width:${progress}%;background:${_company?.color||'var(--col-orange)'};"></div>
-          </div>
-          <div style="font-size:0.75rem;color:var(--col-text-3);">${Math.round(progress)}% concluído</div>
-          ` : ''}
+          
         </div>
         <div class="card-footer">
           <div style="display:flex;gap:6px;align-items:center;margin-left:auto;">
@@ -195,7 +185,7 @@ async function renderTrainings() {
               Plano de Aula
             </button>` : ''}
             <button class="btn btn-primary btn-sm btn-start" style="padding:6px 16px;font-size:0.85rem;">
-              ${progress > 0 ? 'Continuar' : 'Iniciar'}
+              Iniciar
             </button>
           </div>
         </div>
